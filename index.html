@@ -3,162 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ECHOES OF LUMINA - PAROXYSM</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <title>✦ GEMINI WORLD : ULTIMATE PROTOCOL ✦</title>
     <style>
-        :root { --neon: #00f2ff; --gold: #ffd700; --dark: #020205; }
-        body { margin: 0; background: var(--dark); color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; touch-action: none; }
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-orange: #ff6600;
+            --deep-dark: #00040a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--deep-dark); 
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            cursor: crosshair;
+        }
         
-        /* HUD Style RPG */
-        #hud { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 300px; text-align: center; }
-        .energy-container { width: 100%; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,242,255,0.3); border-radius: 4px; overflow: hidden; box-shadow: 0 0 15px rgba(0,242,255,0.2); }
-        #energy-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #00f2ff, #0072ff); transition: width 0.3s; }
-        .level-tag { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin-bottom: 5px; }
+        /* UI LAYER */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
 
-        /* BOUTONS D'ACTION */
-        .action-tray { position: fixed; right: 20px; bottom: 40px; display: flex; flex-direction: column; gap: 20px; z-index: 200; }
-        .skill-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); color: white; font-size: 10px; cursor: pointer; transition: 0.2s; }
-        .skill-btn:active { transform: scale(0.9); border-color: var(--neon); box-shadow: 0 0 20px var(--neon); }
+        .stats-hud {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-        /* JOYSTICK */
-        #joystick-zone { position: fixed; left: 40px; bottom: 40px; width: 150px; height: 150px; z-index: 200; }
-        #joy-base { width: 100%; height: 100%; background: rgba(255,255,255,0.05); border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-        #joy-stick { width: 60px; height: 60px; background: white; border-radius: 50%; position: absolute; left: 45px; top: 45px; opacity: 0.8; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .bar-wrapper {
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 20, 40, 0.7);
+            border: 2px solid var(--neon-blue);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #0072ff, var(--neon-blue));
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .bar-label {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 18px;
+            text-shadow: 1px 1px 2px black;
+            letter-spacing: 1px;
+        }
+
+        /* SKILL TRAY */
+        #skill-tray {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            display: flex;
+            gap: 20px;
+            pointer-events: auto;
+        }
+
+        .skill-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-blue);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+            color: white;
+            font-size: 8px;
+        }
+
+        .skill-circle:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 0 25px var(--neon-blue);
+            background: rgba(0, 242, 255, 0.2);
+        }
+
+        .skill-icon { font-size: 24px; margin-bottom: 2px; }
+
+        .hint-text {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(0, 242, 255, 0.6);
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        canvas { display: block; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="hud">
-    <div class="level-tag">PLAYER 09 - GEMINI PROTOCOL</div>
-    <div class="energy-container"><div id="energy-bar"></div></div>
+<div id="ui-layer">
+    <div class="stats-hud">
+        <div class="bar-wrapper">
+            <div id="energy-fill" class="bar-fill"></div>
+            <div class="bar-label">ENERGY SYNC : <span id="energy-val">100</span>%</div>
+        </div>
+        <div class="bar-wrapper" style="border-color: #ffaa00;">
+            <div id="stamina-fill" class="bar-fill" style="background: linear-gradient(90deg, #ff6600, #ffaa00);"></div>
+            <div class="bar-label">STAMINA : <span id="stamina-val">100</span>%</div>
+        </div>
+    </div>
+
+    <div id="skill-tray">
+        <div class="skill-circle" onclick="triggerIceCast()">
+            <span class="skill-icon">❄️</span>
+            <span>CRÉATION</span>
+        </div>
+        <div class="skill-circle" onclick="triggerPhase()">
+            <span class="skill-icon">👁️</span>
+            <span>TRAVERS</span>
+        </div>
+        <div class="skill-circle" onclick="triggerDash()" style="border-color: #ff6600;">
+            <span class="skill-icon">⚡</span>
+            <span>DASH</span>
+        </div>
+    </div>
+
+    <div class="hint-text">GEMINI PROTOCOL // ZQSD POUR BOUGER // ESPACE POUR SAUTER</div>
 </div>
 
-<div id="joystick-zone"><div id="joy-base"><div id="joy-stick"></div></div></div>
-
-<div class="action-tray">
-    <button class="skill-btn" onclick="creerGlace()">CRÉATION<br>GLACE</button>
-    <button class="skill-btn" onclick="toggleIntangible()">TRAVERS</button>
-</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-    let scene, camera, renderer, clock, player;
-    let moveDir = { x: 0, z: 0 };
-    let energy = 100;
-    let isMoving = false;
+    // --- CONFIGURATION ---
+    let scene, camera, renderer, player, clock, floor;
+    let moveDir = { z: 0, x: 0 };
+    let isPhasing = false;
+    let velocity = new THREE.Vector3();
+    let canJump = true;
+    let particles = [];
+    
+    const settings = {
+        speed: 0.15,
+        jumpForce: 0.2,
+        gravity: 0.008
+    };
 
-    // --- INITIALISATION ---
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020205);
-        scene.fog = new THREE.FogExp2(0x020205, 0.015);
+        scene.background = new THREE.Color(0x000206);
+        scene.fog = new THREE.FogExp2(0x000206, 0.04);
 
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        // Effet de Bloom simulé par ToneMapping
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.toneMappingExposure = 2;
         document.body.appendChild(renderer.domElement);
 
-        // Lumière type "Genshin" (Nuit étoilée)
-        const ambient = new THREE.AmbientLight(0x4040ff, 0.5);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(50, 100, 50);
-        scene.add(sun);
-
-        // Sol infini avec grille lumineuse
-        const floorGeo = new THREE.PlaneGeometry(2000, 2000, 50, 50);
-        const floorMat = new THREE.MeshPhongMaterial({ color: 0x050510, wireframe: false, shininess: 100 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-
-        // Création du Personnage (Modèle articulé)
-        player = new THREE.Group();
-        
-        // Corps
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshPhongMaterial({color: 0xffffff}));
-        torso.position.y = 1.6;
-        player.add(torso);
-
-        // Tête
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshPhongMaterial({color: 0xffffff}));
-        head.position.y = 2.4;
-        player.add(head);
-
-        // Jambes
-        const legGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
-        player.leftLeg = new THREE.Mesh(legGeo, new THREE.MeshPhongMaterial({color: 0x00f2ff}));
-        player.rightLeg = new THREE.Mesh(legGeo, new THREE.MeshPhongMaterial({color: 0x00f2ff}));
-        player.leftLeg.position.set(-0.25, 0.5, 0);
-        player.rightLeg.position.set(0.25, 0.5, 0);
-        player.add(player.leftLeg, player.rightLeg);
-
-        scene.add(player);
         clock = new THREE.Clock();
 
-        setupControls();
+        // --- LUMIÈRES ---
+        const ambient = new THREE.AmbientLight(0x4040ff, 0.5);
+        scene.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0x00f2ff, 1);
+        sun.position.set(10, 20, 10);
+        scene.add(sun);
+
+        createPlayer();
+        createInfiniteFloor();
+        createStarField();
+
         animate();
     }
 
-    // --- CONTROLES ---
-    function setupControls() {
-        const base = document.getElementById('joy-base');
-        const stick = document.getElementById('joy-stick');
+    function createPlayer() {
+        player = new THREE.Group();
         
-        base.addEventListener('touchmove', (e) => {
-            const r = base.getBoundingClientRect();
-            const touch = e.touches[0];
-            let dx = touch.clientX - (r.left + r.width/2);
-            let dy = touch.clientY - (r.top + r.height/2);
-            const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 50);
-            const angle = Math.atan2(dy, dx);
-            
-            stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-            
-            moveDir.x = Math.cos(angle) * (dist/50);
-            moveDir.z = Math.sin(angle) * (dist/50);
-            isMoving = dist > 5;
-
-            player.rotation.y = -angle - Math.PI/2;
+        // Matériau High-Tech "Anti-trace" (Physically Based Rendering)
+        const armorMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            metalness: 0.9,
+            roughness: 0.05,
+            emissive: 0x00f2ff,
+            emissiveIntensity: 0.1
         });
 
-        base.addEventListener('touchend', () => {
-            stick.style.transform = 'translate(0,0)';
-            moveDir = {x: 0, z: 0};
-            isMoving = false;
-        });
+        // Corps (Capsule fluide)
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 4, 16), armorMat);
+        body.position.y = 1.5;
+        player.add(body);
+
+        // Visière néon
+        const visor = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.15, 0.2),
+            new THREE.MeshBasicMaterial({ color: 0x00f2ff })
+        );
+        visor.position.set(0, 2.1, 0.3);
+        player.add(visor);
+
+        // Pieds (pour l'animation)
+        const footGeo = new THREE.BoxGeometry(0.2, 0.1, 0.4);
+        player.leftFoot = new THREE.Mesh(footGeo, armorMat);
+        player.rightFoot = new THREE.Mesh(footGeo, armorMat);
+        player.leftFoot.position.set(-0.3, 0.1, 0);
+        player.rightFoot.position.set(0.3, 0.1, 0);
+        player.add(player.leftFoot, player.rightFoot);
+
+        scene.add(player);
     }
 
-    function creerGlace() {
-        if(energy < 20) return;
-        energy -= 20;
-        
-        const ice = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(1.5, 0),
-            new THREE.MeshPhongMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8, flatShading: true })
-        );
-        ice.position.set(player.position.x + moveDir.x*3, 0.75, player.position.z + moveDir.z*3);
+    function createInfiniteFloor() {
+        const grid = new THREE.GridHelper(200, 50, 0x00f2ff, 0x001122);
+        scene.add(grid);
+
+        const geo = new THREE.PlaneGeometry(1000, 1000);
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: 0x00050a,
+            metalness: 0.8,
+            roughness: 0.2
+        });
+        floor = new THREE.Mesh(geo, mat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+    }
+
+    function createStarField() {
+        const geo = new THREE.BufferGeometry();
+        const vertices = [];
+        for (let i = 0; i < 5000; i++) {
+            vertices.push(Math.random()*600-300, Math.random()*600-300, Math.random()*600-300);
+        }
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const mat = new THREE.PointsMaterial({ color: 0x00f2ff, size: 0.5 });
+        scene.add(new THREE.Points(geo, mat));
+    }
+
+    // --- LOGIQUE DES COMPÉTENCES ---
+    function triggerIceCast() {
+        const iceGeo = new THREE.IcosahedronGeometry(1.5, 0);
+        const iceMat = new THREE.MeshPhongMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.8, 
+            shininess: 100,
+            emissive: 0x00f2ff
+        });
+        const ice = new THREE.Mesh(iceGeo, iceMat);
+        ice.position.set(player.position.x, 0.5, player.position.z - 4);
         scene.add(ice);
         
-        // Petite animation d'apparition
+        // Animation de croissance
         ice.scale.set(0,0,0);
         let s = 0;
         const grow = setInterval(() => {
-            s += 0.2;
+            s += 0.1;
             ice.scale.set(s,s,s);
             if(s >= 1) clearInterval(grow);
-        }, 30);
+        }, 16);
+
+        setTimeout(() => scene.remove(ice), 4000);
     }
 
-    function toggleIntangible() {
+    function triggerPhase() {
+        isPhasing = !isPhasing;
+        const targetOpacity = isPhasing ? 0.2 : 1.0;
         player.traverse(child => {
-            if(child.isMesh) {
+            if (child.isMesh) {
                 child.material.transparent = true;
-                child.material.opacity = (child.material.opacity === 0.3) ? 1 : 0.3;
+                child.material.opacity = targetOpacity;
             }
         });
+    }
+
+    function triggerDash() {
+        settings.speed = 0.8;
+        setTimeout(() => settings.speed = 0.15, 200);
     }
 
     // --- BOUCLE DE JEU ---
@@ -167,34 +309,57 @@
         const delta = clock.getDelta();
         const time = clock.getElapsedTime();
 
-        if(isMoving) {
-            player.position.x += moveDir.x * 0.15;
-            player.position.z += moveDir.z * 0.15;
-            
-            // Animation de marche
-            player.leftLeg.rotation.x = Math.sin(time * 10) * 0.5;
-            player.rightLeg.rotation.x = -Math.sin(time * 10) * 0.5;
-            
-            energy -= 0.05;
-            document.getElementById('energy-bar').style.width = energy + "%";
+        // Gravité et Saut
+        player.position.y += velocity.y;
+        if (player.position.y > 0) {
+            velocity.y -= settings.gravity;
+            canJump = false;
         } else {
-            // Animation "Idle" (respiration)
-            player.leftLeg.rotation.x = 0;
-            player.rightLeg.rotation.x = 0;
-            player.position.y = Math.sin(time * 2) * 0.05;
+            player.position.y = 0;
+            velocity.y = 0;
+            canJump = true;
         }
 
-        // Caméra 3ème personne fluide
-        const camOffset = new THREE.Vector3(0, 5, 10);
-        camOffset.applyQuaternion(player.quaternion);
-        camera.position.lerp(player.position.clone().add(new THREE.Vector3(0, 5, 8)), 0.1);
-        camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+        // Mouvement fluide
+        if (moveDir.z !== 0 || moveDir.x !== 0) {
+            player.position.z += moveDir.z * settings.speed;
+            player.position.x += moveDir.x * settings.speed;
+            
+            // Animation des pieds
+            player.leftFoot.position.y = Math.abs(Math.sin(time * 10)) * 0.2;
+            player.rightFoot.position.y = Math.abs(Math.cos(time * 10)) * 0.2;
+            player.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+        }
+
+        // Caméra "Genshin Style" (Suivi fluide)
+        const idealOffset = new THREE.Vector3(0, 5, 10);
+        idealOffset.applyQuaternion(player.quaternion);
+        idealOffset.add(player.position);
+        camera.position.lerp(idealOffset, 0.1);
+        camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
 
         renderer.render(scene, camera);
     }
 
+    // --- CONTRÔLES ---
+    window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'z') moveDir.z = -1;
+        if (key === 's') moveDir.z = 1;
+        if (key === 'q') moveDir.x = -1;
+        if (key === 'd') moveDir.x = 1;
+        if (key === ' ' && canJump) velocity.y = settings.jumpForce;
+        if (key === 'e') triggerIceCast();
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        if (['z', 's'].includes(key)) moveDir.z = 0;
+        if (['q', 'd'].includes(key)) moveDir.x = 0;
+    });
+
     window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
