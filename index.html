@@ -3,32 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Echoes of Lumina</title>
+    <title>Gemini World - Aethel</title>
     <style>
-        body { margin: 0; background: #050505; color: #00f2ff; font-family: sans-serif; overflow: hidden; text-align: center; }
-        #game-world { position: relative; width: 100vw; height: 70vh; background: #111; border-bottom: 2px solid #00f2ff; }
+        body { margin: 0; background: #050505; color: #00f2ff; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        #world { position: relative; width: 100vw; height: 100vh; }
+        
+        /* L'Éclaireur */
         #player { 
-            position: absolute; width: 40px; height: 40px; 
-            background: #fff; border-radius: 8px; box-shadow: 0 0 15px #fff; 
+            position: absolute; width: 35px; height: 35px; 
+            background: #ffffff; border-radius: 4px; 
+            box-shadow: 0 0 15px #fff;
             top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 10;
         }
-        .controls { height: 30vh; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 10px; }
-        .btn { background: #222; border: 1px solid #00f2ff; color: #00f2ff; padding: 15px; border-radius: 10px; font-weight: bold; }
-        #copyright { font-size: 10px; color: #444; margin-top: 5px; }
+
+        /* Interface */
+        .ui-panel { position: absolute; bottom: 30px; right: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .btn { 
+            width: 75px; height: 75px; border-radius: 50%; 
+            border: 2px solid #00f2ff; background: rgba(0, 242, 255, 0.1); 
+            color: #00f2ff; font-weight: bold; font-size: 10px;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+        
+        /* Zone du Joystick visible */
+        #joy-base { 
+            position: absolute; bottom: 40px; left: 40px; 
+            width: 100px; height: 100px; 
+            background: rgba(255, 255, 255, 0.1); 
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%; touch-action: none;
+        }
+        #joy-stick { 
+            position: absolute; width: 40px; height: 40px; 
+            background: #00f2ff; border-radius: 50%; 
+            top: 30px; left: 30px; box-shadow: 0 0 15px #00f2ff;
+        }
+
+        #msg { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 14px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div id="game-world">
+<div id="world">
+    <div id="msg">SYSTÈME GEMINI : PRÊT</div>
     <div id="player"></div>
-</div>
-
-<div class="controls">
-    <button class="btn" onclick="alert('Pouvoir TRAVERS activé !')">TRAVERS</button>
-    <button class="btn" onclick="alert('Pouvoir CRÉATION activé !')">CRÉATION</button>
-    <div id="copyright">© 2026 - Propriété exclusive du créateur d'Echoes of Lumina</div>
     
+    <div id="joy-base"><div id="joy-stick"></div></div>
+
+    <div class="ui-panel">
+        <button class="btn" onclick="travers()">TRAVERS</button>
+        <button class="btn" onclick="creer()">CRÉATION</button>
+    </div>
 </div>
 
+<script>
+    const player = document.getElementById('player');
+    const stick = document.getElementById('joy-stick');
+    const msg = document.getElementById('msg');
+    
+    let px = window.innerWidth / 2;
+    let py = window.innerHeight / 2;
+    let vx = 0, vy = 0;
+    let actif = false;
+
+    // Déplacement
+    document.addEventListener('touchstart', (e) => { if(e.target.id === 'joy-base' || e.target.id === 'joy-stick') actif = true; });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (!actif) return;
+        const touch = e.touches[0];
+        const base = document.getElementById('joy-base').getBoundingClientRect();
+        const bx = base.left + 50;
+        const by = base.top + 50;
+        
+        let dx = touch.clientX - bx;
+        let dy = touch.clientY - by;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist > 40) { dx *= 40/dist; dy *= 40/dist; }
+        
+        stick.style.transform = `translate(${dx}px, ${dy}px)`;
+        vx = dx / 8;
+        vy = dy / 8;
+    });
+
+    document.addEventListener('touchend', () => {
+        actif = false;
+        stick.style.transform = `translate(0,0)`;
+        vx = 0; vy = 0;
+    });
+
+    function loop() {
+        px += vx; py += vy;
+        player.style.left = px + 'px';
+        player.style.top = py + 'px';
+        requestAnimationFrame(loop);
+    }
+    loop();
+
+    function travers() {
+        player.style.opacity = player.style.opacity === "0.3" ? "1" : "0.3";
+        msg.innerText = "MODE INTANGIBLE";
+        setTimeout(() => { msg.innerText = "SYSTÈME GEMINI : PRÊT"; }, 2000);
+    }
+
+    function creer() {
+        msg.innerText = "CRÉATION DE GLACE...";
+        const bloc = document.createElement('div');
+        bloc.style.cssText = `position:absolute; width:30px; height:30px; background:#00f2ff; left:${px}px; top:${py}px; border-radius:5px; box-shadow:0 0 10px #00f2ff;`;
+        document.getElementById('world').appendChild(bloc);
+    }
+</script>
 </body>
 </html>
