@@ -3,606 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>✦ GEMINI WORLD - ÉDITION ULTIME ★★★★★</title>
+    <title>✦ GEMINI WORLD - OPTIMIZED ✦</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000; 
-            font-family: 'Orbitron', sans-serif;
-            cursor: none;
-        }
+        :root { --neon: #00f2ff; --dark-bg: #00040a; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; cursor: crosshair; }
         
-        #ui-layer { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            pointer-events: none; 
-            z-index: 10; 
-        }
+        /* UI Ultra-légère pour booster les FPS */
+        #ui-layer { position: fixed; inset: 0; pointer-events: none; z-index: 10; padding: 20px; }
         
-        /* Barre d'énergie stylisée */
-        .stats-panel {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
+        .stats-panel { width: 250px; }
         .bar-container { 
-            width: 340px; 
-            height: 28px; 
-            background: linear-gradient(135deg, rgba(0,10,30,0.95), rgba(0,5,20,0.98));
-            border: 3px solid rgba(0,242,255,0.7);
-            border-radius: 18px;
-            box-shadow: 0 0 25px rgba(0,242,255,0.4), inset 0 0 15px rgba(0,0,0,0.6);
-            overflow: hidden;
-            position: relative;
+            height: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--neon); 
+            border-radius: 6px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 0 10px rgba(0,242,255,0.2);
         }
+        .bar-fill { height: 100%; width: 100%; background: var(--neon); transition: width 0.2s; }
         
-        .bar-fill { 
-            height: 100%; 
-            background: linear-gradient(90deg, #00f2ff, #0095ff, #00d4ff);
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0,242,255,0.9);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .bar-fill::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 200%; }
-        }
-        
-        .bar-label {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 5px #00f2ff;
-            z-index: 1;
-            letter-spacing: 1px;
-        }
-        
-        /* Niveau et XP */
-        .level-display {
-            position: absolute;
-            top: 120px;
-            left: 30px;
-            background: linear-gradient(135deg, rgba(0,10,30,0.95), rgba(0,5,20,0.98));
-            border: 2px solid rgba(255,215,0,0.7);
-            border-radius: 15px;
-            padding: 12px 20px;
-            color: #ffd700;
-            font-weight: bold;
-            font-size: 18px;
-            text-shadow: 0 0 10px #ffd700;
-            box-shadow: 0 0 20px rgba(255,215,0,0.3);
-        }
-        
-        /* Combo compteur */
-        .combo-counter {
-            position: absolute;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 48px;
-            font-weight: bold;
-            color: #ff6600;
-            text-shadow: 0 0 20px #ff6600, 0 0 40px #ff3300;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-        
-        /* Compétences UI */
-        #btn-tray { 
-            position: absolute; 
-            bottom: 50px; 
-            right: 50px; 
-            display: flex; 
-            gap: 20px;
-            pointer-events: auto;
-        }
-        
+        .skill-tray { position: absolute; bottom: 30px; right: 30px; display: flex; gap: 10px; pointer-events: auto; }
         .skill-btn { 
-            width: 95px; 
-            height: 95px; 
-            border-radius: 50%; 
-            border: 3px solid #00f2ff; 
-            background: linear-gradient(135deg, rgba(0,60,100,0.85), rgba(0,30,50,0.95));
-            color: #fff; 
-            cursor: pointer;
-            backdrop-filter: blur(15px);
-            box-shadow: 0 0 35px rgba(0,242,255,0.6), inset 0 0 25px rgba(0,242,255,0.25);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            font-size: 11px;
-            font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
+            width: 60px; height: 60px; border-radius: 12px; border: 1px solid var(--neon);
+            background: rgba(0,20,40,0.8); color: white; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; font-size: 20px;
         }
-        
-        .skill-btn:hover {
-            transform: scale(1.15) rotate(5deg);
-            box-shadow: 0 0 50px rgba(0,242,255,0.9), 0 0 80px rgba(0,242,255,0.5);
-            border-color: #fff;
-        }
-        
-        .skill-btn:active {
-            transform: scale(0.9);
-        }
-        
-        .skill-icon {
-            font-size: 32px;
-            filter: drop-shadow(0 0 8px #00f2ff);
-        }
-        
-        .skill-cooldown {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        
-        /* Mini-carte */
-        .minimap {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            width: 220px;
-            height: 220px;
-            background: radial-gradient(circle, rgba(0,30,50,0.95), rgba(0,15,25,0.98));
-            border: 3px solid rgba(0,242,255,0.7);
-            border-radius: 18px;
-            box-shadow: 0 0 25px rgba(0,242,255,0.4);
-            overflow: hidden;
-        }
-        
-        .minimap-player {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 12px;
-            height: 12px;
-            background: #00f2ff;
-            border-radius: 50%;
-            box-shadow: 0 0 15px #00f2ff;
-            animation: ping 2s infinite;
-        }
-        
-        @keyframes ping {
-            0%, 100% { box-shadow: 0 0 15px #00f2ff; }
-            50% { box-shadow: 0 0 30px #00f2ff, 0 0 50px #00f2ff; }
-        }
-        
-        /* Indications */
-        .controls-hint { 
-            position: absolute; 
-            bottom: 30px; 
-            left: 50%;
-            transform: translateX(-50%);
-            color: #00f2ff; 
-            font-size: 14px; 
-            text-shadow: 0 0 12px #00f2ff;
-            background: rgba(0,15,35,0.85);
-            padding: 14px 28px;
-            border-radius: 25px;
-            border: 2px solid rgba(0,242,255,0.5);
-            backdrop-filter: blur(15px);
-            box-shadow: 0 0 20px rgba(0,242,255,0.3);
-        }
-        
-        /* Curseur personnalisé */
-        #custom-cursor {
-            position: fixed;
-            width: 35px;
-            height: 35px;
-            border: 2px solid #00f2ff;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10000;
-            transition: transform 0.1s;
-            box-shadow: 0 0 20px rgba(0,242,255,0.7);
-            animation: cursorPulse 2s infinite;
-        }
-        
-        @keyframes cursorPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        
-        #custom-cursor::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 5px;
-            height: 5px;
-            background: #00f2ff;
-            border-radius: 50%;
-            box-shadow: 0 0 12px #00f2ff;
-        }
-        
-        /* Messages flottants */
-        .floating-text {
-            position: fixed;
-            color: #fff;
-            font-size: 24px;
-            font-weight: bold;
-            pointer-events: none;
-            animation: floatUp 2s forwards;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-        }
-        
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
-        }
-        
-        /* Écran de chargement */
+
         #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #000428, #004e92, #000428);
-            background-size: 400% 400%;
-            animation: gradientShift 10s ease infinite;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            transition: opacity 1s;
+            position: fixed; inset: 0; background: var(--dark-bg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; transition: 0.5s;
         }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        .loading-logo {
-            font-size: 56px;
-            color: #00f2ff;
-            text-shadow: 0 0 40px #00f2ff, 0 0 80px #0072ff;
-            margin-bottom: 40px;
-            animation: pulse 2s infinite;
-            letter-spacing: 3px;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.08); }
-        }
-        
-        .loading-bar {
-            width: 450px;
-            height: 8px;
-            background: rgba(0,242,255,0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid rgba(0,242,255,0.4);
-        }
-        
-        .loading-progress {
-            height: 100%;
-            background: linear-gradient(90deg, #00f2ff, #0072ff, #00f2ff);
-            background-size: 200% 100%;
-            width: 0%;
-            transition: width 0.3s;
-            box-shadow: 0 0 25px #00f2ff;
-            animation: shimmer 2s infinite;
-        }
-        
-        .loading-tip {
-            margin-top: 30px;
-            color: #88ddff;
-            font-size: 14px;
-            text-align: center;
-            max-width: 500px;
-            line-height: 1.6;
-        }
-        
-        canvas { display: block; }
+        .loader { width: 50px; height: 50px; border: 3px solid #111; border-top: 3px solid var(--neon); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <div id="loading-screen">
-    <div class="loading-logo">✦ GEMINI WORLD ✦</div>
-    <div class="loading-bar">
-        <div class="loading-progress" id="loading-progress"></div>
-    </div>
-    <div class="loading-tip">
-        Explorez un monde mystérieux rempli de cristaux éthérés...<br>
-        Maîtrisez vos pouvoirs élémentaires pour vaincre les ténèbres
-    </div>
+    <div class="loader"></div>
+    <h1 style="color: var(--neon); margin-top: 20px; font-family: sans-serif; letter-spacing: 5px;">INITIALISATION</h1>
 </div>
-
-<div id="custom-cursor"></div>
 
 <div id="ui-layer">
     <div class="stats-panel">
-        <div class="bar-container">
-            <div class="bar-fill" id="energy-fill" style="width: 100%;"></div>
-            <div class="bar-label">⚡ ÉNERGIE: <span id="energy-text">100</span>/100</div>
-        </div>
-        <div class="bar-container">
-            <div class="bar-fill" id="stamina-fill" style="width: 100%; background: linear-gradient(90deg, #ffaa00, #ff6600, #ffaa00);"></div>
-            <div class="bar-label">💨 ENDURANCE: <span id="stamina-text">100</span>/100</div>
-        </div>
+        <div style="color: var(--neon); font-size: 10px; margin-bottom: 4px;">SYSTEM ENERGY</div>
+        <div class="bar-container"><div id="energy-fill" class="bar-fill"></div></div>
+        <div style="color: #ffaa00; font-size: 10px; margin-bottom: 4px;">STAMINA</div>
+        <div class="bar-container"><div id="stamina-fill" class="bar-fill" style="background: #ffaa00;"></div></div>
     </div>
-    
-    <div class="level-display">
-        ⭐ NIVEAU <span id="level">1</span> | XP: <span id="xp">0</span>/100
-    </div>
-    
-    <div class="combo-counter" id="combo-counter"></div>
-    
-    <div class="minimap">
-        <div class="minimap-player"></div>
-    </div>
-    
-    <div id="btn-tray">
-        <button class="skill-btn" id="skill-ice" title="Compétence Glace (E)">
-            <div class="skill-icon">❄️</div>
-            <div>GLACE</div>
-            <div class="skill-cooldown" id="cd-ice"></div>
-        </button>
-        <button class="skill-btn" id="skill-dash" title="Dash Rapide (SHIFT)">
-            <div class="skill-icon">⚡</div>
-            <div>DASH</div>
-            <div class="skill-cooldown" id="cd-dash"></div>
-        </button>
-        <button class="skill-btn" id="skill-phase" title="Mode Spectral (Q)">
-            <div class="skill-icon">👁️</div>
-            <div>PHASE</div>
-            <div class="skill-cooldown" id="cd-phase"></div>
-        </button>
-        <button class="skill-btn" id="skill-ultimate" title="Compétence Ultime (R)">
-            <div class="skill-icon">💥</div>
-            <div>ULTIME</div>
-            <div class="skill-cooldown" id="cd-ultimate"></div>
-        </button>
-    </div>
-    
-    <div class="controls-hint">
-        🎮 ZQSD: Déplacer | ESPACE: Sauter | SHIFT: Sprint | E/Q/R: Compétences
+
+    <div class="skill-tray">
+        <div class="skill-btn" onclick="triggerIce()">❄️</div>
+        <div class="skill-btn" onclick="triggerPhase()">👁️</div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-    // ==================== VARIABLES GLOBALES ====================
     let scene, camera, renderer, player, clock;
-    let moveDir = { x: 0, z: 0 };
-    let energy = 100, maxEnergy = 100;
-    let stamina = 100, maxStamina = 100;
-    let level = 1, xp = 0;
-    let combo = 0;
-    let terrainChunks = [];
-    let particles = [];
-    let crystals = [];
-    let enemies = [];
-    let isJumping = false;
-    let isSprinting = false;
-    let velocity = { y: 0 };
+    let energy = 100, stamina = 100;
     let keys = {};
-    let cameraBobbing = 0;
-    let time = 0;
-    
-    // Cooldowns
-    let cooldowns = { ice: 0, dash: 0, phase: 0, ultimate: 0 };
-    
-    // ==================== INITIALISATION ====================
+
+    // 1. Initialisation de la Scène
     function init() {
-        // Scène
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000a1a);
-        scene.fog = new THREE.FogExp2(0x001a3a, 0.012);
-        
-        // Caméra
+        scene.fog = new THREE.Fog(0x00040a, 10, 50);
+
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 8, 15);
-        
-        // Renderer
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        camera.position.set(0, 5, 10);
+
+        renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.3;
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Limite le pixel ratio pour mobile
         document.body.appendChild(renderer.domElement);
-        
+
         clock = new THREE.Clock();
-        
-        // Éclairage dynamique
-        const ambientLight = new THREE.AmbientLight(0x4488ff, 0.5);
-        scene.add(ambientLight);
-        
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(50, 100, 30);
-        dirLight.castShadow = true;
-        dirLight.shadow.camera.left = -60;
-        dirLight.shadow.camera.right = 60;
-        dirLight.shadow.camera.top = 60;
-        dirLight.shadow.camera.bottom = -60;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        scene.add(dirLight);
-        
-        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x362204, 0.7);
-        scene.add(hemiLight);
-        
-        // Lumières d'accentuation
-        const fillLight1 = new THREE.PointLight(0x00f2ff, 1, 40);
-        fillLight1.position.set(-15, 8, -15);
-        scene.add(fillLight1);
-        
-        const fillLight2 = new THREE.PointLight(0xff6600, 0.7, 35);
-        fillLight2.position.set(15, 8, 15);
-        scene.add(fillLight2);
-        
-        // Création du joueur
+
+        // Lumières optimisées (Seulement 2 lumières max)
+        const sun = new THREE.DirectionalLight(0x00f2ff, 1);
+        sun.position.set(5, 10, 7);
+        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0x404040, 0.5));
+
+        createWorld();
         createPlayer();
         
-        // Génération du paysage
-        generateEnhancedLandscape(0, 0);
-        generateEnhancedLandscape(0, -100);
-        
-        // Ennemis
-        spawnEnemies();
-        
-        // Particules
-        createAmbientParticles();
-        createMagicParticles();
-        
-        // Skybox
-        createStarfield();
-        
-        // Événements
-        setupEventListeners();
-        
-        // Chargement
-        simulateLoading();
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        setTimeout(() => document.getElementById('loading-screen').style.opacity = 0, 1000);
+        animate();
     }
-    
-    // ==================== CRÉATION DU JOUEUR ====================
+
+    // 2. Création du Terrain (Utilisation d'une seule géométrie pour performance)
+    function createWorld() {
+        const grid = new THREE.GridHelper(200, 40, 0x00f2ff, 0x001122);
+        scene.add(grid);
+
+        // Sol solide simplifié
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x00040a });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+        
+        // Cristaux instanciés (Optionnel pour perf, ici simple mesh)
+        for(let i=0; i<30; i++) {
+            const crysGeo = new THREE.OctahedronGeometry(Math.random() * 0.5 + 0.2);
+            const crysMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, wireframe: true });
+            const crystal = new THREE.Mesh(crysGeo, crysMat);
+            crystal.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
+            scene.add(crystal);
+        }
+    }
+
+    // 3. Création du Personnage (Simple & Efficace)
     function createPlayer() {
         player = new THREE.Group();
-        
-        const armorMat = new THREE.MeshStandardMaterial({ 
-            color: 0xf0f0f0, 
-            metalness: 0.9, 
-            roughness: 0.15,
-            emissive: 0x00f2ff,
-            emissiveIntensity: 0.4
-        });
-        
-        // Corps (Cylindre + Sphère pour simulation capsule)
-        const bodyGeo = new THREE.CylinderGeometry(0.45, 0.45, 1.0, 12);
-        const body = new THREE.Mesh(bodyGeo, armorMat);
-        body.position.y = 1.5;
-        body.castShadow = true;
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 2, 1),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00f2ff, emissiveIntensity: 0.5 })
+        );
+        body.position.y = 1;
         player.add(body);
+        scene.add(player);
+    }
+
+    // 4. Boucle de Rendu (Optimisée)
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        // Déplacements
+        const speed = keys['ShiftLeft'] ? 0.3 : 0.15;
+        if (keys['KeyW']) player.position.z -= speed;
+        if (keys['KeyS']) player.position.z += speed;
+        if (keys['KeyA']) player.position.x -= speed;
+        if (keys['KeyD']) player.position.x += speed;
+
+        // Mise à jour Caméra (Smooth Follow)
+        camera.position.lerp(new THREE.Vector3(player.position.x, player.position.y + 5, player.position.z + 10), 0.1);
+        camera.lookAt(player.position);
+
+        // Gestion Énergie
+        if (keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD']) {
+            stamina = Math.max(0, stamina - 0.1);
+        } else {
+            stamina = Math.min(100, stamina + 0.2);
+        }
         
-        const bodyTopGeo = new THREE.SphereGeometry(0.45, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-        const bodyTop = new THREE.Mesh(bodyTopGeo, armorMat);
-        bodyTop.position.y = 2;
-        bodyTop.castShadow = true;
-        player.add(bodyTop);
-        
-        const bodyBottomGeo = new THREE.SphereGeometry(0.45, 12, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-        const bodyBottom = new THREE.Mesh(bodyBottomGeo, armorMat);
-        bodyBottom.position.y = 1;
-        bodyBottom.castShadow = true;
-        player.add(bodyBottom);
-        
-        player.torso = body;
-        
-        // Tête
-        const headGeo = new THREE.SphereGeometry(0.38, 16, 16);
-        const head = new THREE.Mesh(headGeo, armorMat);
-        head.position.y = 2.7;
-        head.castShadow = true;
-        player.add(head);
-        
-        // Visière brillante
-        const visorGeo = new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const visorMat = new THREE.MeshStandardMaterial({
-            color: 0x00f2ff,
-            emissive: 0x00f2ff,
-            emissiveIntensity: 1.5,
-            transparent: true,
-            opacity: 0.8,
-            metalness: 1,
-            roughness: 0
-        });
-        const visor = new THREE.Mesh(visorGeo, visorMat);
-        visor.position.y = 2.75;
-        visor.position.z = 0.15;
-        visor.rotation.x = -0.3;
-        player.add(visor);
-        
-        // Bras (Cylindre + Sphères)
-        const armGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 8);
-        player.leftArm = new THREE.Mesh(armGeo, armorMat);
-        player.rightArm = new THREE.Mesh(armGeo, armorMat);
-        player.leftArm.position.set(-0.65, 1.5, 0);
-        player.rightArm.position.set(0.65, 1.5, 0);
-        player.leftArm.rotation.z = 0.4;
-        player.rightArm.rotation.z = -0.4;
-        player.leftArm.castShadow = true;
-        player.rightArm.castShadow = true;
-        player.add(player.leftArm, player.rightArm);
-        
-        // Mains luminescentes
-        const handGeo = new THREE.SphereGeometry(0.15, 8, 8);
-        const handMat = new THREE.MeshStandardMaterial({
-            color: 0x00f2ff,
-            emissive: 0x00f2ff,
-            emissiveIntensity: 1,
-            metalness: 0.5
-        });
-        const leftHand = new THREE.Mesh(handGeo, handMat);
-        leftHand.position.y = -0.5;
-        player.leftArm.add(leftHand);
-        
-        const rightHand = new THREE.Mesh(handGeo, handMat);
-        rightHand.position.y = -0.5;
-        player.rightArm.add(rightHand);
-        
-        // Jambes (Cylindre + Sphères)
-        const legGeo = new THREE.CylinderGeometry(0.15, 0.15, 1.0, 8);
-        player.leftLeg = new THREE.Mesh(legGeo, armorMat);
-        player.rightLeg = new THREE.Mesh(legGeo, armorMat);
-        player.leftLeg.position.set(-0.28, 0.6, 0);
-        player.rightLeg.position.set(0.28, 0.6, 0);
-        player.leftLeg.castShadow = true;
-        player.rightLeg.castShadow = true;
-        player.add(player.leftLeg, player.rightLeg);
-        
-        // Aura magique
-        const auraGeo = new THREE.SphereGeometry(1.3, 32, 32);
-        const auraMat = new THREE.MeshBasicMaterial({
-            color: 0x00f2ff,
-          
+        updateUI();
+        renderer.render(scene, camera);
+    }
+
+    function updateUI() {
+        document.getElementById('stamina-fill').style.width = stamina + "%";
+        document.getElementById('energy-fill').style.width = energy + "%";
+    }
+
+    // Compétences
+    function triggerIce() {
+        if(energy < 20) return;
+        energy -= 20;
+        const ice = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.6 }));
+        ice.position.copy(player.position);
+        scene.add(ice);
+        setTimeout(() => scene.remove(ice), 2000);
+    }
+
+    function triggerPhase() {
+        player.children[0].material.opacity = 0.3;
+        player.children[0].material.transparent = true;
+        setTimeout(() => {
+            player.children[0].material.opacity = 1;
+        }, 2000);
+    }
+
+    init();
+
+    // Redimensionnement
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
