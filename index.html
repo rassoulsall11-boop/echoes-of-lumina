@@ -3,196 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GEMINI PROTOCOL - PAROXYSM</title>
+    <title>ECHOES OF LUMINA - GEMINI PROTOCOL</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --gold: #ffd700; --dark: #020205; --energy: #00f2ff; }
+        :root { --neon: #00f2ff; --gold: #ffd700; --dark: #0a0a12; --energy-color: #00f2ff; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; touch-action: none; }
         
-        #hud { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; width: 250px; text-align: center; }
-        .energy-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border: 1px solid var(--neon); border-radius: 10px; margin-top: 5px; box-shadow: 0 0 10px var(--neon); }
-        #energy-bar { width: 100%; height: 100%; background: var(--neon); transition: width 0.2s; }
-        .status-text { font-size: 9px; text-transform: uppercase; letter-spacing: 3px; color: var(--neon); text-shadow: 0 0 5px var(--neon); }
-
-        .action-tray { position: fixed; right: 30px; bottom: 40px; display: flex; flex-direction: column; gap: 15px; z-index: 200; }
-        .skill-btn { 
-            width: 75px; height: 75px; border-radius: 50%; border: 2px solid var(--neon); 
-            background: rgba(0, 242, 255, 0.1); color: white; font-size: 9px; font-weight: bold;
-            backdrop-filter: blur(8px); cursor: pointer; transition: 0.3s;
+        /* ÉCRAN DE DÉMARRAGE */
+        #start-screen {
+            position: fixed; inset: 0; background: radial-gradient(circle, #1a1a2e, #0a0a12);
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .skill-btn:active { transform: scale(1.1); background: var(--neon); color: black; }
+        #start-screen h1 { font-size: 2.5em; color: var(--neon); text-shadow: 0 0 20px var(--neon); margin-bottom: 10px; text-align: center; }
+        .start-btn { padding: 15px 40px; background: transparent; border: 2px solid var(--neon); color: var(--neon); font-size: 1.1em; cursor: pointer; transition: 0.3s; font-family: 'Orbitron'; }
+        .start-btn:active { background: var(--neon); color: black; }
 
-        #joystick-zone { position: fixed; left: 40px; bottom: 40px; width: 120px; height: 120px; z-index: 200; }
-        #joy-base { width: 100%; height: 100%; background: rgba(255,255,255,0.05); border: 2px solid rgba(0,242,255,0.2); border-radius: 50%; position: relative; }
-        #joy-stick { width: 50px; height: 50px; background: var(--neon); border-radius: 50%; position: absolute; left: 35px; top: 35px; box-shadow: 0 0 15px var(--neon); }
+        /* MONDE */
+        #camera { position: relative; width: 100vw; height: 100vh; overflow: hidden; perspective: 1000px; }
+        #world { position: absolute; width: 5000px; height: 5000px; background: 
+            linear-gradient(rgba(0, 242, 255, 0.05) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(0, 242, 255, 0.05) 2px, transparent 2px);
+            background-size: 150px 150px; background-color: #0d0d1a; transition: filter 0.3s; }
+
+        /* LE PERSONNAGE (TENUE ANTI-TRACE) */
+        #player {
+            position: fixed; width: 50px; height: 70px;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 500; pointer-events: none; transition: opacity 0.3s, filter 0.3s;
+        }
+        .hero-head { width: 22px; height: 22px; background: #fff; border-radius: 50%; margin: 0 auto; box-shadow: 0 0 15px var(--neon); border: 1px solid var(--neon); }
+        .hero-body { width: 32px; height: 42px; background: var(--neon); border-radius: 8px; margin: 2px auto; position: relative; border: 2px solid #fff; box-shadow: inset 0 0 10px rgba(255,255,255,0.8); }
+        .hero-arm { position: absolute; width: 8px; height: 25px; background: #fff; top: 5px; border-radius: 4px; }
+        .arm-l { left: -12px; } .arm-r { right: -12px; }
+
+        /* EFFETS SPÉCIAUX */
+        .ice-cube { position: absolute; width: 60px; height: 60px; background: rgba(0, 242, 255, 0.4); border: 2px solid #fff; border-radius: 8px; backdrop-filter: blur(5px); animation: spawn 0.4s ease-out; box-shadow: 0 0 20px var(--neon); }
+        @keyframes spawn { from { transform: scale(0) rotate(45deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        /* HUD */
+        .hud { position: fixed; top: 20px; left: 20px; z-index: 800; width: 200px; }
+        .energy-container { width: 100%; height: 10px; border: 1px solid var(--neon); border-radius: 5px; overflow: hidden; background: rgba(0,0,0,0.5); margin-top: 5px; }
+        #energy-bar { width: 100%; height: 100%; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: width 0.1s; }
+
+        /* CONTROLES */
+        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 900; align-items: flex-end; }
+        #joy-base { width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; touch-action: none; }
+        #joy-stick { width: 50px; height: 50px; background: var(--neon); border-radius: 50%; position: relative; top: 35px; left: 35px; box-shadow: 0 0 15px var(--neon); pointer-events: none; }
+        
+        .btns-right { display: flex; flex-direction: column; gap: 15px; }
+        .circle-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--neon); background: rgba(0,0,0,0.6); color: var(--neon); font-family: 'Orbitron'; font-weight: bold; font-size: 9px; cursor: pointer; backdrop-filter: blur(5px); }
+        .circle-btn:active { transform: scale(0.9); background: var(--neon); color: black; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.min.js"></script>
 </head>
 <body>
 
-<div id="hud">
-    <div class="status-text">ECHOES OF LUMINA : SYNC</div>
+<div id="start-screen">
+    <h1>GEMINI PROTOCOL</h1>
+    <p style="color: #fff; opacity: 0.6; letter-spacing: 2px; font-size: 10px;">CHARGEMENT DES ONDES CORPORELLES...</p>
+    <button class="start-btn" onclick="startGame()">INITIALISER</button>
+</div>
+
+<div id="camera">
+    <div id="world"></div>
+    <div id="player">
+        <div class="hero-head"></div>
+        <div class="hero-body"><div class="hero-arm arm-l"></div><div class="hero-arm arm-r"></div></div>
+    </div>
+</div>
+
+<div class="hud">
+    <div id="status-text" style="font-size: 10px; color: var(--neon);">BRACELET : ACTIF</div>
     <div class="energy-container"><div id="energy-bar"></div></div>
 </div>
 
-<div id="joystick-zone"><div id="joy-base"><div id="joy-stick"></div></div></div>
-
-<div class="action-tray">
-    <button class="skill-btn" onclick="creerGlace()">CRÉATION<br>GLACE</button>
-    <button class="skill-btn" id="btn-travers" onclick="toggleIntangible()">TRAVERS</button>
+<div class="controls">
+    <div id="joy-base"><div id="joy-stick"></div></div>
+    <div class="btns-right">
+        <button class="circle-btn" id="btn-glace" onclick="actionGlace()">CRÉATION<br>GLACE</button>
+        <button class="circle-btn" id="btn-travers" onclick="actionTravers()">TRAVERS</button>
+    </div>
 </div>
 
 <script>
-    let scene, camera, renderer, clock, player;
-    let moveDir = { x: 0, z: 0 };
+    let worldX = -2500, worldY = -2500;
+    let velX = 0, velY = 0;
     let energy = 100;
-    let isMoving = false;
+    let isGameRunning = false;
     let isIntangible = false;
 
-    function init() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x010103);
-        scene.fog = new THREE.FogExp2(0x010103, 0.02);
-
-        camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        // Lumières
-        const hemi = new THREE.HemisphereLight(0x00f2ff, 0x050510, 1);
-        scene.add(hemi);
-
-        // Sol Grille Néon
-        const grid = new THREE.GridHelper(1000, 100, 0x00f2ff, 0x222222);
-        scene.add(grid);
-
-        // Joueur (Tenue "Liquide")
-        player = new THREE.Group();
-        const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 100 });
-        
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), mat);
-        body.position.y = 1;
-        player.add(body);
-        
-        // Tête avec "Visière"
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), mat);
-        head.position.y = 1.8;
-        player.add(head);
-
-        scene.add(player);
-        clock = new THREE.Clock();
-
-        setupJoystick();
-        animate();
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        isGameRunning = true;
+        gameLoop();
     }
 
-    function setupJoystick() {
-        const base = document.getElementById('joy-base');
-        const stick = document.getElementById('joy-stick');
+    const base = document.getElementById('joy-base');
+    const stick = document.getElementById('joy-stick');
+    
+    const updateJoystick = (e) => {
+        if(!isGameRunning) return;
+        const touch = e.touches[0];
+        const rect = base.getBoundingClientRect();
+        const centerX = rect.left + rect.width/2;
+        const centerY = rect.top + rect.height/2;
         
-        const handleMove = (e) => {
-            const r = base.getBoundingClientRect();
-            const touch = e.touches ? e.touches[0] : e;
-            let dx = touch.clientX - (r.left + r.width/2);
-            let dy = touch.clientY - (r.top + r.height/2);
-            const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
-            const angle = Math.atan2(dy, dx);
-            
-            stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-            
-            moveDir.x = Math.cos(angle) * (dist/40);
-            moveDir.z = Math.sin(angle) * (dist/40);
-            isMoving = dist > 5;
-            player.rotation.y = -angle - Math.PI/2;
-        };
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const maxDist = 40;
+        
+        if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
+        
+        stick.style.transform = `translate(${dx}px, ${dy}px)`;
+        velX = dx / 5;
+        velY = dy / 5;
 
-        base.addEventListener('touchmove', handleMove);
-        base.addEventListener('touchend', () => {
-            stick.style.transform = 'translate(0,0)';
-            moveDir = {x: 0, z: 0};
-            isMoving = false;
-        });
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        document.getElementById('player').style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
+    };
+
+    base.addEventListener('touchmove', updateJoystick);
+    base.addEventListener('touchend', () => {
+        stick.style.transform = 'translate(0,0)';
+        velX = 0; velY = 0;
+    });
+
+    function gameLoop() {
+        if(!isGameRunning) return;
+
+        worldX -= velX;
+        worldY -= velY;
+
+        // Limites
+        worldX = Math.max(-4500, Math.min(0, worldX));
+        worldY = Math.max(-4500, Math.min(0, worldY));
+
+        document.getElementById('world').style.left = worldX + 'px';
+        document.getElementById('world').style.top = worldY + 'px';
+
+        // Logique Énergie (Puisée des ondes du corps)
+        if(velX !== 0 || velY !== 0) {
+            energy -= isIntangible ? 0.1 : 0.03; // Travers consomme plus
+        } else {
+            energy += 0.05; // Régénération passive (ondes/chaleur)
+        }
+        
+        energy = Math.min(100, Math.max(0, energy));
+        document.getElementById('energy-bar').style.width = energy + "%";
+        
+        // Couleur de barre si énergie basse
+        document.getElementById('energy-bar').style.background = energy < 20 ? "red" : "var(--neon)";
+
+        requestAnimationFrame(gameLoop);
     }
 
-    function toggleIntangible() {
+    function actionTravers() {
         isIntangible = !isIntangible;
+        const p = document.getElementById('player');
         const btn = document.getElementById('btn-travers');
         
-        player.traverse(child => {
-            if(child.isMesh) {
-                child.material.transparent = true;
-                child.material.opacity = isIntangible ? 0.3 : 1;
-                child.material.color.set(isIntangible ? 0x00f2ff : 0xffffff);
-            }
-        });
-        btn.style.boxShadow = isIntangible ? "0 0 20px #00f2ff" : "none";
+        if(isIntangible) {
+            p.style.opacity = "0.3";
+            p.style.filter = "cyan(100%) blur(2px)";
+            btn.style.background = "var(--neon)";
+            btn.style.color = "black";
+        } else {
+            p.style.opacity = "1";
+            p.style.filter = "none";
+            btn.style.background = "rgba(0,0,0,0.5)";
+            btn.style.color = "var(--neon)";
+        }
     }
 
-    function creerGlace() {
+    function actionGlace() {
         if(energy < 15) return;
         energy -= 15;
         
-        const iceGroup = new THREE.Group();
-        const iceMat = new THREE.MeshPhongMaterial({ 
-            color: 0x00f2ff, transparent: true, opacity: 0.7, flatShading: true 
-        });
-
-        for(let i=0; i<3; i++) {
-            const chunk = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + Math.random(), 0), iceMat);
-            chunk.position.set(Math.random()-0.5, 0, Math.random()-0.5);
-            iceGroup.add(chunk);
-        }
-
-        iceGroup.position.set(
-            player.position.x + Math.sin(player.rotation.y)*2, 
-            0.5, 
-            player.position.z + Math.cos(player.rotation.y)*2
-        );
-        scene.add(iceGroup);
+        const ice = document.createElement('div');
+        ice.className = 'ice-cube';
         
-        setTimeout(() => scene.remove(iceGroup), 5000); // Disparaît après 5s
+        // Position relative au monde pour qu'elle reste sur place
+        const spawnX = Math.abs(worldX) + window.innerWidth/2 - 30;
+        const spawnY = Math.abs(worldY) + window.innerHeight/2 - 30;
+        
+        ice.style.left = spawnX + 'px';
+        ice.style.top = spawnY + 'px';
+        
+        document.getElementById('world').appendChild(ice);
+        
+        // Disparition après 4 secondes
+        setTimeout(() => {
+            ice.style.opacity = "0";
+            ice.style.transform = "scale(0)";
+            ice.style.transition = "0.5s";
+            setTimeout(() => ice.remove(), 500);
+        }, 4000);
     }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-        const time = clock.getElapsedTime();
-
-        if(isMoving) {
-            let speed = isIntangible ? 0.25 : 0.15; // Plus rapide en "Travers"
-            player.position.x += moveDir.x * speed;
-            player.position.z += moveDir.z * speed;
-            energy = Math.max(0, energy - 0.08);
-        } else {
-            // Récupération d'énergie via le corps/ondes
-            energy = Math.min(100, energy + 0.1); 
-            player.position.y = Math.sin(time * 2) * 0.1; // Flottaison idle
-        }
-
-        document.getElementById('energy-bar').style.width = energy + "%";
-
-        // Caméra suit le joueur
-        const camDist = 8;
-        camera.position.lerp(new THREE.Vector3(
-            player.position.x, 
-            player.position.y + 5, 
-            player.position.z + camDist
-        ), 0.05);
-        camera.lookAt(player.position);
-
-        renderer.render(scene, camera);
-    }
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    init();
 </script>
 </body>
 </html>
