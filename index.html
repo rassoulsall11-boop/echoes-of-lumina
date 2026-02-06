@@ -3,250 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>✦ GEMINI WORLD - FUSION ULTIME ✦</title>
+    <title>✦ GEMINI WORLD - EVOLUTION ✦</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; cursor: none; }
+        #ui-layer { position: fixed; inset: 0; pointer-events: none; z-index: 10; padding: 20px; }
         
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        
-        /* Stats Panel */
-        .stats-panel { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .bar-container { 
-            width: 250px; height: 22px; background: rgba(0, 20, 40, 0.8); 
-            border: 2px solid #00f2ff; border-radius: 11px; overflow: hidden; position: relative;
-        }
-        .bar-fill { height: 100%; transition: width 0.1s linear; box-shadow: 0 0 15px #00f2ff; }
-        #energy-fill { background: linear-gradient(90deg, #00f2ff, #0072ff); width: 100%; }
-        #stamina-fill { background: linear-gradient(90deg, #ffaa00, #ff6600); width: 100%; }
-        .bar-label { 
-            position: absolute; width: 100%; text-align: center; color: #fff; 
-            font-size: 10px; font-weight: bold; line-height: 18px; text-shadow: 0 0 5px #000;
-        }
+        /* Stats Styles */
+        .bar-container { width: 250px; height: 20px; background: rgba(0, 20, 40, 0.8); border: 2px solid #00f2ff; border-radius: 10px; margin-bottom: 10px; position: relative; pointer-events: auto; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.2s; }
+        #energy-fill { background: cyan; box-shadow: 0 0 15px cyan; }
+        #stamina-fill { background: #ffaa00; }
+        .label { position: absolute; width: 100%; text-align: center; color: white; font-size: 10px; font-weight: bold; line-height: 16px; }
 
-        /* Skills */
+        /* Actions */
         #btn-tray { position: absolute; bottom: 30px; right: 30px; display: flex; gap: 15px; pointer-events: auto; }
-        .skill-btn { 
-            width: 75px; height: 75px; border-radius: 50%; border: 2px solid #00f2ff;
-            background: rgba(0, 30, 60, 0.8); color: #fff; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 10px; transition: 0.3s; backdrop-filter: blur(5px);
-        }
-        .skill-btn:hover { background: rgba(0, 242, 255, 0.3); box-shadow: 0 0 20px #00f2ff; }
-        .skill-btn:active { transform: scale(0.9); }
-        .skill-icon { font-size: 24px; margin-bottom: 2px; }
+        .skill-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #00f2ff; background: rgba(0, 30, 60, 0.8); color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; transition: 0.2s; }
+        .skill-btn:hover { background: #00f2ff; color: #000; }
 
-        /* Minimap */
-        .minimap { 
-            position: absolute; top: 20px; right: 20px; width: 150px; height: 150px; 
-            background: rgba(0, 10, 30, 0.8); border: 2px solid #00f2ff; border-radius: 15px;
-            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.2);
-        }
-
-        #custom-cursor {
-            position: fixed; width: 25px; height: 25px; border: 2px solid #00f2ff;
-            border-radius: 50%; pointer-events: none; z-index: 10001; transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px #00f2ff; transition: transform 0.1s ease-out;
-        }
-
-        #loading-screen {
-            position: fixed; inset: 0; background: #000b1a; z-index: 10000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #00f2ff; transition: opacity 1s, visibility 1s;
-        }
+        #custom-cursor { position: fixed; width: 20px; height: 20px; border: 2px solid #00f2ff; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); }
+        #loading-screen { position: fixed; inset: 0; background: #000b1a; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #00f2ff; transition: 1s; }
     </style>
 </head>
 <body>
 
 <div id="loading-screen">
-    <h1 style="letter-spacing: 8px; text-shadow: 0 0 20px #00f2ff;">GEMINI WORLD</h1>
-    <p>INITIALISATION DE LA MATRICE...</p>
+    <h1>GEMINI WORLD</h1>
+    <p>Génération du monde ouvert...</p>
 </div>
 
 <div id="custom-cursor"></div>
 
 <div id="ui-layer">
-    <div class="stats-panel">
-        <div class="bar-container">
-            <div id="energy-fill" class="bar-fill"></div>
-            <div class="bar-label">⚡ ÉNERGIE</div>
-        </div>
-        <div class="bar-container">
-            <div id="stamina-fill" class="bar-fill"></div>
-            <div class="bar-label">💨 ENDURANCE</div>
-        </div>
-    </div>
-    
-    <div class="minimap"></div>
+    <div class="bar-container"><div id="energy-fill" class="bar-fill"></div><div class="label">ÉNERGIE</div></div>
+    <div class="bar-container"><div id="stamina-fill" class="bar-fill"></div><div class="label">ENDURANCE</div></div>
     
     <div id="btn-tray">
-        <button class="skill-btn" onclick="triggerSkill('ice')">
-            <span class="skill-icon">❄️</span><span>GLACE</span>
-        </button>
-        <button class="skill-btn" onclick="triggerSkill('phase')">
-            <span class="skill-icon">👻</span><span>TRAVERS</span>
-        </button>
-        <button class="skill-btn" onclick="triggerSkill('ult')">
-            <span class="skill-icon">💥</span><span>ULTIME</span>
-        </button>
+        <button class="skill-btn" onclick="castIce()">❄️<br>GLACE (F)</button>
+        <button class="skill-btn" onclick="togglePhase()">👻<br>TRAVERS (T)</button>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-    let scene, camera, renderer, player, clock, aura;
+    let scene, camera, renderer, player, clock;
     let keys = {};
-    let energy = 100, stamina = 100;
-    let isPhasing = false;
+    let stamina = 100, isPhasing = false;
+    let velocity = new THREE.Vector3();
+    let canJump = true;
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000510);
-        scene.fog = new THREE.FogExp2(0x000510, 0.015);
+        scene.background = new THREE.Color(0x020a1a);
+        scene.fog = new THREE.FogExp2(0x020a1a, 0.01);
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
         clock = new THREE.Clock();
 
-        // Lumières
-        const ambient = new THREE.AmbientLight(0x404040, 2);
-        scene.add(ambient);
-        const sun = new THREE.PointLight(0x00f2ff, 2, 100);
-        sun.position.set(10, 20, 10);
+        // Lumières style "Anime"
+        scene.add(new THREE.AmbientLight(0x404040, 1.5));
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(50, 100, 50);
+        sun.castShadow = true;
         scene.add(sun);
 
-        // Sol Grille Technologique
-        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            color: 0x051020,
-            roughness: 0.8
-        });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
+        // Sol immense
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(1000, 1000),
+            new THREE.MeshStandardMaterial({ color: 0x1a2a3a })
+        );
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
-
-        // Aide visuelle (Grille)
+        
         const grid = new THREE.GridHelper(1000, 100, 0x00f2ff, 0x001122);
-        grid.position.y = 0.05;
         scene.add(grid);
 
-        // Joueur
+        // Joueur (Avatar Gemini)
         player = new THREE.Group();
-        const bodyGeo = new THREE.CapsuleGeometry(0.4, 1, 8, 16);
-        const bodyMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
-            metalness: 0.9, 
-            roughness: 0.1,
-            envMapIntensity: 1
-        });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        const body = new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.5, 1, 8, 16),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.5 })
+        );
         body.position.y = 1;
-        body.castShadow = true;
         player.add(body);
-        
-        // Aura Gemini
-        const auraGeo = new THREE.SphereGeometry(1.5, 32, 32);
-        const auraMat = new THREE.MeshBasicMaterial({ 
-            color: 0x00f2ff, 
-            wireframe: true, 
-            transparent: true, 
-            opacity: 0.05 
-        });
-        aura = new THREE.Mesh(auraGeo, auraMat);
-        aura.position.y = 1;
-        player.add(aura);
-
         scene.add(player);
 
-        // Décor (Cristaux de glace/énergie)
-        for(let i=0; i<100; i++) {
-            const crystalGeo = new THREE.OctahedronGeometry(Math.random() * 1.5);
-            const crystalMat = new THREE.MeshStandardMaterial({ 
-                color: 0x00f2ff, 
-                emissive: 0x0077ff,
-                transparent: true,
-                opacity: 0.8
-            });
-            const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-            crystal.position.set(Math.random()*400-200, 0, Math.random()*400-200);
-            crystal.rotation.set(Math.random(), Math.random(), Math.random());
-            scene.add(crystal);
-        }
-
-        // Événements
+        // Event Listeners
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
         window.addEventListener('mousemove', e => {
-            const cursor = document.getElementById('custom-cursor');
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
+            document.getElementById('custom-cursor').style.left = e.clientX + 'px';
+            document.getElementById('custom-cursor').style.top = e.clientY + 'px';
         });
 
-        window.addEventListener('resize', onWindowResize, false);
-
-        // Fin du chargement
-        setTimeout(() => { 
-            const loader = document.getElementById('loading-screen');
-            loader.style.opacity = '0';
-            setTimeout(() => { 
-                loader.style.visibility = 'hidden'; 
-                loader.style.pointerEvents = 'none';
-            }, 1000);
-        }, 1500);
-        
+        setTimeout(() => document.getElementById('loading-screen').style.opacity = 0, 2000);
         animate();
     }
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    // --- POUVOIRS ---
+    function castIce() {
+        const ice = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            new THREE.MeshStandardMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8, emissive: 0x00f2ff })
+        );
+        const offset = new THREE.Vector3(0, 1, -4).applyQuaternion(player.quaternion);
+        ice.position.copy(player.position).add(offset);
+        scene.add(ice);
+        // Disparaît après 5 secondes
+        setTimeout(() => scene.remove(ice), 5000);
     }
 
-    function triggerSkill(type) {
-        console.log("Compétence activée : " + type);
-        // Ici tu pourras ajouter tes effets "Création de glace" ou "Travers"
+    function togglePhase() {
+        isPhasing = !isPhasing;
+        player.children[0].material.opacity = isPhasing ? 0.3 : 1;
+        player.children[0].material.transparent = isPhasing;
+        console.log(isPhasing ? "Mode Intangible ACTIVÉ" : "Mode Intangible DÉSACTIVÉ");
     }
 
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
 
-        // Déplacement fluide
-        const speed = (keys['ShiftLeft'] && stamina > 0) ? 0.4 : 0.2;
-        
+        // Déplacement (Style Genshin)
+        const speed = (keys['ShiftLeft'] && stamina > 0) ? 0.4 : 0.15;
         if (keys['KeyW']) player.translateZ(-speed);
         if (keys['KeyS']) player.translateZ(speed);
-        if (keys['KeyA']) player.rotation.y += 0.04;
-        if (keys['KeyD']) player.rotation.y -= 0.04;
+        if (keys['KeyA']) player.rotation.y += 0.05;
+        if (keys['KeyD']) player.rotation.y -= 0.05;
 
-        // Rotation de l'aura pour l'effet visuel
-        if (aura) aura.rotation.y += 0.01;
-
-        // Gestion Endurance
-        const isRunning = keys['ShiftLeft'] && (keys['KeyW'] || keys['KeyS']);
-        if (isRunning) {
-            stamina = Math.max(0, stamina - 0.8);
+        // Saut
+        if (keys['Space'] && canJump) {
+            velocity.y = 0.2;
+            canJump = false;
+        }
+        player.position.y += velocity.y;
+        if (player.position.y > 0) {
+            velocity.y -= 0.01; // Gravité
         } else {
-            stamina = Math.min(100, stamina + 0.3);
+            player.position.y = 0;
+            velocity.y = 0;
+            canJump = true;
+        }
+
+        // Endurance
+        if (keys['ShiftLeft'] && (keys['KeyW'] || keys['KeyS'])) {
+            stamina = Math.max(0, stamina - 0.5);
+        } else {
+            stamina = Math.min(100, stamina + 0.2);
         }
         document.getElementById('stamina-fill').style.width = stamina + '%';
 
-        // Caméra fluide (interpolation)
-        const relativeCameraOffset = new THREE.Vector3(0, 6, 12);
-        const cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
-        camera.position.lerp(cameraOffset, 0.08);
-        camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+        // Touches rapides
+        if (keys['KeyF']) { castIce(); keys['KeyF'] = false; }
+        if (keys['KeyT']) { togglePhase(); keys['KeyT'] = false; }
+
+        // Caméra Third Person
+        const camOffset = new THREE.Vector3(0, 5, 10).applyQuaternion(player.quaternion);
+        camera.position.lerp(player.position.clone().add(camOffset), 0.1);
+        camera.lookAt(player.position);
 
         renderer.render(scene, camera);
     }
