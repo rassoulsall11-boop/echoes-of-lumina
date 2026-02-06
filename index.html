@@ -3,93 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ECHOES OF LUMINA - AETHEL</title>
+    <title>ECHOES OF LUMINA - FINAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --dark: #050505; }
+        :root { --neon: #00f2ff; --gold: #ffd700; --dark: #0a0a12; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; touch-action: none; }
         
-        /* Décor de fond */
-        #map { position: absolute; width: 3000px; height: 3000px; background: 
-            linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
-            background-size: 100px 100px; z-index: 1; }
-
-        /* Le Joueur (Design amélioré) */
-        #player { 
-            position: absolute; width: 40px; height: 40px; 
-            background: white; border: 2px solid var(--neon);
-            box-shadow: 0 0 20px var(--neon); border-radius: 8px;
-            z-index: 10; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        /* ÉCRAN DE DÉMARRAGE */
+        #start-screen {
+            position: fixed; inset: 0; background: radial-gradient(circle, #1a1a2e, #0a0a12);
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
+        #start-screen h1 { font-size: 3em; color: var(--neon); text-shadow: 0 0 20px var(--neon); margin-bottom: 20px; text-align: center; }
+        .start-btn { padding: 15px 40px; background: transparent; border: 2px solid var(--neon); color: var(--neon); font-size: 1.2em; cursor: pointer; transition: 0.3s; }
+        .start-btn:hover { background: var(--neon); color: black; box-shadow: 0 0 30px var(--neon); }
 
-        /* Interface (HUD) */
-        #hud { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 100; pointer-events: none; }
-        .stat-bar { width: 200px; height: 10px; background: rgba(255,255,255,0.1); border: 1px solid var(--neon); border-radius: 5px; overflow: hidden; margin-bottom: 5px; }
-        #energy-fill { width: 100%; height: 100%; background: var(--neon); transition: width 0.3s; }
+        /* MONDE ET CAMÉRA */
+        #camera { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        #world { position: absolute; width: 5000px; height: 5000px; background: 
+            linear-gradient(rgba(0, 242, 255, 0.05) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(0, 242, 255, 0.05) 2px, transparent 2px);
+            background-size: 150px 150px; background-color: #0d0d1a; }
 
-        /* Magasin (Menu caché) */
-        #shop-menu { 
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; height: 60%; background: rgba(0,0,0,0.9); border: 2px solid var(--neon);
-            z-index: 200; padding: 20px; border-radius: 15px; text-align: center;
+        /* LE PERSONNAGE (HÉROS) */
+        #player {
+            position: fixed; width: 50px; height: 70px;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 500; pointer-events: none; transition: opacity 0.3s;
         }
+        .hero-head { width: 20px; height: 20px; background: #fff; border-radius: 50%; margin: 0 auto; box-shadow: 0 0 10px var(--neon); }
+        .hero-body { width: 30px; height: 40px; background: var(--neon); border-radius: 5px; margin: 2px auto; position: relative; border: 2px solid #fff; }
+        .hero-arm { position: absolute; width: 8px; height: 25px; background: #fff; top: 5px; }
+        .arm-l { left: -10px; } .arm-r { right: -10px; }
 
-        /* Boutons tactiles */
-        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 100; }
-        #joy-base { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
-        #joy-stick { width: 50px; height: 50px; background: var(--neon); border-radius: 50%; position: absolute; left: 35px; top: 35px; }
+        /* OBJETS DANS LE MONDE */
+        .crystal { position: absolute; width: 20px; height: 40px; background: var(--gold); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); filter: drop-shadow(0 0 10px var(--gold)); }
+
+        /* INTERFACE (HUD) */
+        .hud { position: fixed; top: 20px; left: 20px; z-index: 800; }
+        .energy-container { width: 200px; height: 15px; border: 2px solid var(--neon); border-radius: 10px; overflow: hidden; }
+        #energy-bar { width: 100%; height: 100%; background: var(--neon); transition: 0.2s; }
+
+        /* BOUTONS TACTILES */
+        .controls { position: fixed; bottom: 40px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box; z-index: 900; }
+        #joy-base { width: 130px; height: 130px; background: rgba(255,255,255,0.05); border: 3px solid rgba(255,255,255,0.2); border-radius: 50%; }
+        #joy-stick { width: 60px; height: 60px; background: var(--neon); border-radius: 50%; position: relative; top: 35px; left: 35px; box-shadow: 0 0 20px var(--neon); }
         
-        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--neon); background: rgba(0,242,255,0.1); color: var(--neon); font-size: 9px; font-weight: bold; }
-        #shop-btn { position: fixed; top: 20px; right: 20px; background: gold; color: black; border: none; padding: 10px 20px; border-radius: 5px; z-index: 100; font-weight: bold; }
+        .btns-right { display: flex; flex-direction: column; gap: 20px; }
+        .circle-btn { width: 85px; height: 85px; border-radius: 50%; border: 3px solid var(--neon); background: rgba(0,0,0,0.5); color: var(--neon); font-family: 'Orbitron'; font-weight: bold; font-size: 10px; }
     </style>
 </head>
 <body>
 
-<div id="hud">
-    <div>ÉNERGIE CORPORELLE</div>
-    <div class="stat-bar"><div id="energy-fill"></div></div>
-    <div id="status">SECTEUR AETHEL-01</div>
+<div id="start-screen">
+    <h1>ECHOES OF LUMINA</h1>
+    <p>PLANÈTE AETHEL - SYSTÈME NOVA PLAY</p>
+    <button class="start-btn" onclick="startGame()">INITIALISER BRACELET</button>
 </div>
 
-<button id="shop-btn" onclick="toggleShop()">MAGASIN (SHOP)</button>
-
-<div id="shop-menu">
-    <h2>MAGASIN GEMINI</h2>
-    <hr border="1" color="#00f2ff">
-    <p>Amélioration Bracelet (Anti-rouille) - 500 Credits</p>
-    <p>Texture Anti-trace (Tenue) - 300 Credits</p>
-    <button onclick="toggleShop()" style="background:var(--neon); border:none; padding:10px 20px; margin-top:20px;">FERMER</button>
+<div id="camera">
+    <div id="world">
+        </div>
+    
+    <div id="player">
+        <div class="hero-head"></div>
+        <div class="hero-body">
+            <div class="hero-arm arm-l"></div>
+            <div class="hero-arm arm-r"></div>
+        </div>
+    </div>
 </div>
 
-<div id="map"></div>
-<div id="player"></div>
+<div class="hud">
+    <div style="font-size: 12px; margin-bottom: 5px;">ÉNERGIE CORPORELLE</div>
+    <div class="energy-container"><div id="energy-bar"></div></div>
+</div>
 
 <div class="controls">
     <div id="joy-base"><div id="joy-stick"></div></div>
-    <div class="action-btns">
-        <button class="btn" onclick="creerGlace()">GLACE</button>
-        <button class="btn" onclick="activerTravers()">TRAVERS</button>
+    <div class="btns-right">
+        <button class="circle-btn" onclick="actionGlace()">CRÉATION<br>GLACE</button>
+        <button class="circle-btn" onclick="actionTravers()">TRAVERS</button>
     </div>
 </div>
 
 <script>
-    const map = document.getElementById('map');
-    const player = document.getElementById('player');
-    const energyFill = document.getElementById('energy-fill');
-    
-    let px = window.innerWidth/2, py = window.innerHeight/2;
-    let mx = 0, my = 0; // Position de la carte
-    let vx = 0, vy = 0;
+    let worldX = -2500, worldY = -2500;
+    let velX = 0, velY = 0;
     let energy = 100;
+    let isGameRunning = false;
 
-    // Gestion Joystick Multi-touch
-    const joyBase = document.getElementById('joy-base');
-    const joyStick = document.getElementById('joy-stick');
+    // Créer des cristaux au hasard sur la carte
+    const world = document.getElementById('world');
+    for(let i=0; i<50; i++) {
+        let c = document.createElement('div');
+        c.className = 'crystal';
+        c.style.left = Math.random() * 4800 + 'px';
+        c.style.top = Math.random() * 4800 + 'px';
+        world.appendChild(c);
+    }
 
-    joyBase.addEventListener('touchmove', (e) => {
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        isGameRunning = true;
+        gameLoop();
+    }
+
+    // Gestion Joystick
+    const base = document.getElementById('joy-base');
+    const stick = document.getElementById('joy-stick');
+    
+    base.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
-        const rect = joyBase.getBoundingClientRect();
+        const rect = base.getBoundingClientRect();
         const centerX = rect.left + rect.width/2;
         const centerY = rect.top + rect.height/2;
         
@@ -99,46 +125,61 @@
         
         if(dist > 50) { dx *= 50/dist; dy *= 50/dist; }
         
-        joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-        vx = dx / 10;
-        vy = dy / 10;
+        stick.style.transform = `translate(${dx}px, ${dy}px)`;
+        velX = dx / 8;
+        velY = dy / 8;
+
+        // Rotation du personnage vers la direction
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        document.getElementById('player').style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
     });
 
-    joyBase.addEventListener('touchend', () => {
-        joyStick.style.transform = 'translate(0,0)';
-        vx = 0; vy = 0;
+    base.addEventListener('touchend', () => {
+        stick.style.transform = 'translate(0,0)';
+        velX = 0; velY = 0;
     });
 
-    function loop() {
-        // Au lieu de bouger le joueur, on bouge la carte (effet monde ouvert)
-        mx -= vx; my -= vy;
-        map.style.transform = `translate(${mx}px, ${my}px)`;
-        
-        // Consommation d'énergie si on bouge
-        if(vx !== 0 || vy !== 0) {
-            energy -= 0.05;
+    function gameLoop() {
+        if(!isGameRunning) return;
+
+        worldX -= velX;
+        worldY -= velY;
+
+        // Limites du monde
+        if(worldX > 0) worldX = 0;
+        if(worldX < -4500) worldX = -4500;
+        if(worldY > 0) worldY = 0;
+        if(worldY < -4500) worldY = -4500;
+
+        world.style.left = worldX + 'px';
+        world.style.top = worldY + 'px';
+
+        // Énergie
+        if(velX !== 0 || velY !== 0) {
+            energy -= 0.02;
             if(energy < 0) energy = 0;
-            energyFill.style.width = energy + "%";
+            document.getElementById('energy-bar').style.width = energy + "%";
         }
-        
-        requestAnimationFrame(loop);
-    }
-    loop();
 
-    function toggleShop() {
-        const shop = document.getElementById('shop-menu');
-        shop.style.display = shop.style.display === 'block' ? 'none' : 'block';
+        requestAnimationFrame(gameLoop);
     }
 
-    function activerTravers() {
-        player.style.opacity = player.style.opacity === "0.3" ? "1" : "0.3";
+    function actionTravers() {
+        const p = document.getElementById('player');
+        p.style.opacity = p.style.opacity === "0.3" ? "1" : "0.3";
     }
 
-    function creerGlace() {
-        const bloc = document.createElement('div');
-        bloc.style.cssText = `position:absolute; width:40px; height:40px; background:rgba(0,242,255,0.6); border:1px solid white; left:${window.innerWidth/2 - mx}px; top:${window.innerHeight/2 - my}px; z-index:5; box-shadow:0 0 15px var(--neon);`;
-        map.appendChild(bloc);
+    function actionGlace() {
+        if(energy < 10) return;
+        energy -= 10;
+        const ice = document.createElement('div');
+        ice.style.cssText = `position:absolute; width:60px; height:60px; background:rgba(0,242,255,0.7); border:2px solid #fff; border-radius:10px; box-shadow:0 0 20px var(--neon);`;
+        // Calculer position par rapport au centre du monde
+        ice.style.left = (Math.abs(worldX) + window.innerWidth/2 - 30) + 'px';
+        ice.style.top = (Math.abs(worldY) + window.innerHeight/2 - 30) + 'px';
+        world.appendChild(ice);
     }
 </script>
 </body>
-</html>
+    </html>
+    
