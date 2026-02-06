@@ -3,193 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ECHOES OF LUMINA 3D - AETHEL</title>
+    <title>ECHOES OF LUMINA - PAROXYSM</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --dark: #050505; }
+        :root { --neon: #00f2ff; --gold: #ffd700; --dark: #020205; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; touch-action: none; }
         
-        /* HUD & UI */
-        #hud { position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .stat-bar { width: 200px; height: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--neon); border-radius: 6px; overflow: hidden; }
-        #energy-fill { width: 100%; height: 100%; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: width 0.3s; }
-        
-        #shop-btn { position: fixed; top: 20px; right: 20px; background: gold; border: none; padding: 10px 20px; border-radius: 5px; z-index: 100; font-weight: bold; cursor: pointer; font-family: 'Orbitron'; }
-        
-        #shop-menu { 
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 70%; background: rgba(0,0,0,0.9); border: 2px solid var(--neon);
-            z-index: 200; padding: 20px; border-radius: 15px; text-align: center;
-        }
+        /* HUD Style RPG */
+        #hud { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 300px; text-align: center; }
+        .energy-container { width: 100%; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,242,255,0.3); border-radius: 4px; overflow: hidden; box-shadow: 0 0 15px rgba(0,242,255,0.2); }
+        #energy-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #00f2ff, #0072ff); transition: width 0.3s; }
+        .level-tag { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin-bottom: 5px; }
 
-        /* CONTROLES */
-        .controls { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 100; }
-        #joy-base { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
-        #joy-stick { width: 50px; height: 50px; background: var(--neon); border-radius: 50%; position: absolute; left: 35px; top: 35px; box-shadow: 0 0 15px var(--neon); }
-        
-        .action-btns { display: flex; flex-direction: column; gap: 15px; }
-        .btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--neon); background: rgba(0,242,255,0.1); color: var(--neon); font-family: 'Orbitron'; font-size: 10px; font-weight: bold; }
+        /* BOUTONS D'ACTION */
+        .action-tray { position: fixed; right: 20px; bottom: 40px; display: flex; flex-direction: column; gap: 20px; z-index: 200; }
+        .skill-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); color: white; font-size: 10px; cursor: pointer; transition: 0.2s; }
+        .skill-btn:active { transform: scale(0.9); border-color: var(--neon); box-shadow: 0 0 20px var(--neon); }
+
+        /* JOYSTICK */
+        #joystick-zone { position: fixed; left: 40px; bottom: 40px; width: 150px; height: 150px; z-index: 200; }
+        #joy-base { width: 100%; height: 100%; background: rgba(255,255,255,0.05); border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); position: relative; }
+        #joy-stick { width: 60px; height: 60px; background: white; border-radius: 50%; position: absolute; left: 45px; top: 45px; opacity: 0.8; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.min.js"></script>
 </head>
 <body>
 
 <div id="hud">
-    <div style="font-size: 10px; margin-bottom: 5px;">ONDES CORPORELLES</div>
-    <div class="stat-bar"><div id="energy-fill"></div></div>
-    <div style="margin-top: 5px; font-size: 12px;">ZONE: AETHEL INFRA-3D</div>
+    <div class="level-tag">PLAYER 09 - GEMINI PROTOCOL</div>
+    <div class="energy-container"><div id="energy-bar"></div></div>
 </div>
 
-<button id="shop-btn" onclick="toggleShop()">SHOP</button>
+<div id="joystick-zone"><div id="joy-base"><div id="joy-stick"></div></div></div>
 
-<div id="shop-menu">
-    <h2>MAGASIN GEMINI</h2>
-    <p>Bracelet Anti-rouille [ACTIF]</p>
-    <p>Texture Anti-trace [ACTIF]</p>
-    <button onclick="toggleShop()" style="background:var(--neon); border:none; padding:10px 20px; font-family:'Orbitron';">RETOUR</button>
-</div>
-
-<div class="controls">
-    <div id="joy-base"><div id="joy-stick"></div></div>
-    <div class="action-btns">
-        <button class="btn" onclick="creerGlace()">GLACE</button>
-        <button class="btn" onclick="activerTravers()">TRAVERS</button>
-    </div>
+<div class="action-tray">
+    <button class="skill-btn" onclick="creerGlace()">CRÉATION<br>GLACE</button>
+    <button class="skill-btn" onclick="toggleIntangible()">TRAVERS</button>
 </div>
 
 <script>
-    // --- CONFIGURATION 3D ---
-    let scene, camera, renderer, clock, playerGroup;
-    let chunks = new Map();
-    const CHUNK_SIZE = 400;
-    const VIEW_DIST = 4;
+    let scene, camera, renderer, clock, player;
+    let moveDir = { x: 0, z: 0 };
     let energy = 100;
-    let vx = 0, vz = 0;
-    let isIntangible = false;
+    let isMoving = false;
 
-    function noise(x, y) {
-        return (Math.sin(x * 0.05) + Math.sin(y * 0.05)) * 10;
-    }
-
+    // --- INITIALISATION ---
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510);
-        scene.fog = new THREE.Fog(0x050510, 100, 1000);
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.FogExp2(0x020205, 0.015);
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Lumières
-        const light = new THREE.DirectionalLight(0x00f2ff, 1);
-        light.position.set(10, 20, 10);
-        scene.add(new THREE.AmbientLight(0x404040, 2));
-        scene.add(light);
+        // Lumière type "Genshin" (Nuit étoilée)
+        const ambient = new THREE.AmbientLight(0x4040ff, 0.5);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(50, 100, 50);
+        scene.add(sun);
 
-        // Personnage 3D (Groupe)
-        playerGroup = new THREE.Group();
-        const bodyGeo = new THREE.BoxGeometry(1, 2, 1);
-        const bodyMat = new THREE.MeshPhongMaterial({ color: 0xffffff, emissive: 0x00f2ff });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        playerGroup.add(body);
-        scene.add(playerGroup);
+        // Sol infini avec grille lumineuse
+        const floorGeo = new THREE.PlaneGeometry(2000, 2000, 50, 50);
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x050510, wireframe: false, shininess: 100 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
+        // Création du Personnage (Modèle articulé)
+        player = new THREE.Group();
+        
+        // Corps
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshPhongMaterial({color: 0xffffff}));
+        torso.position.y = 1.6;
+        player.add(torso);
+
+        // Tête
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshPhongMaterial({color: 0xffffff}));
+        head.position.y = 2.4;
+        player.add(head);
+
+        // Jambes
+        const legGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
+        player.leftLeg = new THREE.Mesh(legGeo, new THREE.MeshPhongMaterial({color: 0x00f2ff}));
+        player.rightLeg = new THREE.Mesh(legGeo, new THREE.MeshPhongMaterial({color: 0x00f2ff}));
+        player.leftLeg.position.set(-0.25, 0.5, 0);
+        player.rightLeg.position.set(0.25, 0.5, 0);
+        player.add(player.leftLeg, player.rightLeg);
+
+        scene.add(player);
         clock = new THREE.Clock();
-        setupJoystick();
+
+        setupControls();
         animate();
     }
 
-    function generateChunk(cx, cz) {
-        const key = `${cx}_${cz}`;
-        if (chunks.has(key)) return;
-
-        const geo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, 20, 20);
-        const mat = new THREE.MeshPhongMaterial({ color: 0x111122, wireframe: true });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.rotation.x = -Math.PI / 2;
-        mesh.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
-
-        const pos = geo.attributes.position;
-        for(let i=0; i<pos.count; i++) {
-            let x = pos.getX(i) + cx * CHUNK_SIZE;
-            let y = pos.getZ(i) + cz * CHUNK_SIZE;
-            pos.setY(i, noise(x, y));
-        }
-        scene.add(mesh);
-        chunks.set(key, mesh);
-    }
-
-    function setupJoystick() {
+    // --- CONTROLES ---
+    function setupControls() {
         const base = document.getElementById('joy-base');
         const stick = document.getElementById('joy-stick');
+        
         base.addEventListener('touchmove', (e) => {
-            const t = e.touches[0];
             const r = base.getBoundingClientRect();
-            let dx = t.clientX - (r.left + r.width/2);
-            let dy = t.clientY - (r.top + r.height/2);
-            const d = Math.min(Math.sqrt(dx*dx+dy*dy), 50);
+            const touch = e.touches[0];
+            let dx = touch.clientX - (r.left + r.width/2);
+            let dy = touch.clientY - (r.top + r.height/2);
+            const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 50);
             const angle = Math.atan2(dy, dx);
             
-            stick.style.transform = `translate(${Math.cos(angle)*d}px, ${Math.sin(angle)*d}px)`;
-            vx = Math.cos(angle) * (d/50) * 0.8;
-            vz = Math.sin(angle) * (d/50) * 0.8;
-            playerGroup.rotation.y = -angle + Math.PI/2;
+            stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+            
+            moveDir.x = Math.cos(angle) * (dist/50);
+            moveDir.z = Math.sin(angle) * (dist/50);
+            isMoving = dist > 5;
+
+            player.rotation.y = -angle - Math.PI/2;
         });
+
         base.addEventListener('touchend', () => {
             stick.style.transform = 'translate(0,0)';
-            vx = 0; vz = 0;
+            moveDir = {x: 0, z: 0};
+            isMoving = false;
         });
     }
 
     function creerGlace() {
-        if(energy < 15) return;
-        energy -= 15;
-        const iceGeo = new THREE.BoxGeometry(3, 3, 3);
-        const iceMat = new THREE.MeshPhongMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
-        const ice = new THREE.Mesh(iceGeo, iceMat);
-        ice.position.set(playerGroup.position.x, playerGroup.position.y, playerGroup.position.z);
+        if(energy < 20) return;
+        energy -= 20;
+        
+        const ice = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.5, 0),
+            new THREE.MeshPhongMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8, flatShading: true })
+        );
+        ice.position.set(player.position.x + moveDir.x*3, 0.75, player.position.z + moveDir.z*3);
         scene.add(ice);
+        
+        // Petite animation d'apparition
+        ice.scale.set(0,0,0);
+        let s = 0;
+        const grow = setInterval(() => {
+            s += 0.2;
+            ice.scale.set(s,s,s);
+            if(s >= 1) clearInterval(grow);
+        }, 30);
     }
 
-    function activerTravers() {
-        isIntangible = !isIntangible;
-        playerGroup.children[0].material.opacity = isIntangible ? 0.3 : 1;
-        playerGroup.children[0].material.transparent = true;
+    function toggleIntangible() {
+        player.traverse(child => {
+            if(child.isMesh) {
+                child.material.transparent = true;
+                child.material.opacity = (child.material.opacity === 0.3) ? 1 : 0.3;
+            }
+        });
     }
 
-    function toggleShop() {
-        const s = document.getElementById('shop-menu');
-        s.style.display = s.style.display === 'block' ? 'none' : 'block';
-    }
-
+    // --- BOUCLE DE JEU ---
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
+        const time = clock.getElapsedTime();
 
-        // Déplacement
-        playerGroup.position.x += vx;
-        playerGroup.position.z += vz;
-        playerGroup.position.y = noise(playerGroup.position.x, playerGroup.position.z) + 1.5;
-
-        // Caméra (3ème personne)
-        camera.position.set(playerGroup.position.x, playerGroup.position.y + 5, playerGroup.position.z + 10);
-        camera.lookAt(playerGroup.position);
-
-        // Chunks
-        const cx = Math.round(playerGroup.position.x / CHUNK_SIZE);
-        const cz = Math.round(playerGroup.position.z / CHUNK_SIZE);
-        for(let x=-VIEW_DIST; x<=VIEW_DIST; x++) {
-            for(let z=-VIEW_DIST; z<=VIEW_DIST; z++) generateChunk(cx+x, cz+z);
-        }
-
-        // Énergie
-        if(vx !== 0) {
+        if(isMoving) {
+            player.position.x += moveDir.x * 0.15;
+            player.position.z += moveDir.z * 0.15;
+            
+            // Animation de marche
+            player.leftLeg.rotation.x = Math.sin(time * 10) * 0.5;
+            player.rightLeg.rotation.x = -Math.sin(time * 10) * 0.5;
+            
             energy -= 0.05;
-            if(energy < 0) energy = 0;
-            document.getElementById('energy-fill').style.width = energy + "%";
+            document.getElementById('energy-bar').style.width = energy + "%";
+        } else {
+            // Animation "Idle" (respiration)
+            player.leftLeg.rotation.x = 0;
+            player.rightLeg.rotation.x = 0;
+            player.position.y = Math.sin(time * 2) * 0.05;
         }
+
+        // Caméra 3ème personne fluide
+        const camOffset = new THREE.Vector3(0, 5, 10);
+        camOffset.applyQuaternion(player.quaternion);
+        camera.position.lerp(player.position.clone().add(new THREE.Vector3(0, 5, 8)), 0.1);
+        camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
 
         renderer.render(scene, camera);
     }
