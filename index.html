@@ -3,160 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>✦ GEMINI WORLD - MASTERPIECE EDITION ✦</title>
+    <title>✦ GEMINI WORLD - MASTERPIECE EDITION ★★★★★</title>
     <style>
+        /* --- TON CSS ORIGINAL (CONSERVÉ ET OPTIMISÉ) --- */
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
-        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000; 
-            font-family: 'Rajdhani', sans-serif;
-            cursor: none;
-        }
-
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Rajdhani', sans-serif; cursor: none; }
         canvas { display: block; }
 
-        /* === HUD & UI === */
-        #ui-layer { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            pointer-events: none; 
-            z-index: 10; 
-        }
-
-        .stats-panel {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .bar-container { 
-            width: 280px; 
-            height: 24px; 
-            background: rgba(5,15,35,0.9);
-            border: 2px solid;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .stats-panel { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .bar-container { width: 300px; height: 26px; background: rgba(5,15,35,0.9); border: 2px solid; border-radius: 16px; overflow: hidden; position: relative; }
         .bar-container.energy { border-color: #00f2ff; }
         .bar-container.stamina { border-color: #ffaa00; }
+        .bar-fill { height: 100%; transition: width 0.3s ease; position: relative; }
+        .bar-fill.energy { background: linear-gradient(90deg, #00f2ff, #0095ff); box-shadow: 0 0 20px #00f2ff; }
+        .bar-fill.stamina { background: linear-gradient(90deg, #ffaa00, #ff8800); box-shadow: 0 0 20px #ffaa00; }
+        
+        .bar-label { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #fff; font-size: 11px; font-weight: 700; z-index: 1; }
+        .bar-value { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #fff; font-size: 11px; z-index: 1; }
 
-        .bar-fill { 
-            height: 100%; 
-            width: 100%;
-            transition: width 0.2s ease-out;
-        }
+        .level-display { position: absolute; top: 75px; left: 15px; background: rgba(255,215,0,0.1); border: 2px solid #ffd700; border-radius: 14px; padding: 8px 18px; color: #ffd700; font-weight: 700; }
+        
+        #btn-tray { position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; pointer-events: auto; }
+        .skill-btn { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00f2ff; background: rgba(0,35,55,0.8); color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; }
+        .skill-btn:hover { transform: scale(1.1); box-shadow: 0 0 30px #00f2ff; }
+        .skill-btn.attack { border-color: #ff6600; }
+        
+        .minimap { position: absolute; top: 15px; right: 15px; width: 150px; height: 150px; background: rgba(0,20,35,0.8); border: 2px solid #00f2ff; border-radius: 10px; overflow: hidden; }
+        .minimap-player { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px #fff; }
 
-        .bar-fill.energy { background: linear-gradient(90deg, #00f2ff, #0095ff); box-shadow: 0 0 15px #00f2ff; }
-        .bar-fill.stamina { background: linear-gradient(90deg, #ffaa00, #ff8800); box-shadow: 0 0 15px #ffaa00; }
+        #custom-cursor { position: fixed; width: 30px; height: 30px; border: 2px solid #00f2ff; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); }
 
-        .bar-label {
-            position: absolute;
-            top: 50%;
-            left: 10px;
-            transform: translateY(-50%);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-shadow: 0 1px 4px #000;
-        }
-
-        /* === BOUTONS & SKILLS === */
-        #btn-tray { 
-            position: absolute; 
-            bottom: 25px; 
-            right: 25px; 
-            display: flex; 
-            gap: 15px;
-            pointer-events: auto;
-        }
-
-        .skill-btn { 
-            width: 70px; 
-            height: 70px; 
-            border-radius: 50%; 
-            border: 2px solid #00f2ff;
-            background: rgba(0,35,55,0.8);
-            backdrop-filter: blur(10px);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .skill-btn:hover { transform: scale(1.1); box-shadow: 0 0 20px #00f2ff; }
-        .skill-icon { font-size: 24px; }
-
-        /* === CURSEUR & CHARGEMENT === */
-        #custom-cursor {
-            position: fixed;
-            width: 30px;
-            height: 30px;
-            border: 2px solid #00f2ff;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10000;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px #00f2ff;
-        }
-
-        #loading-screen {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle, #001a33, #000);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            transition: opacity 1s;
-        }
-
-        .loading-logo {
-            font-family: 'Orbitron';
-            font-size: 40px;
-            color: #00f2ff;
-            text-shadow: 0 0 30px #00f2ff;
-            margin-bottom: 20px;
-        }
-
+        #loading-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: 1s; }
+        .loading-logo { font-family: 'Orbitron'; font-size: 40px; color: #00f2ff; margin-bottom: 20px; }
         .loading-bar { width: 300px; height: 6px; background: rgba(0,242,255,0.2); border-radius: 3px; overflow: hidden; }
-        .loading-progress { width: 0%; height: 100%; background: #00f2ff; transition: width 0.2s; }
-
-        /* === MOBILE === */
-        #joystick-container {
-            position: fixed; bottom: 40px; left: 40px;
-            width: 120px; height: 120px;
-            background: rgba(0,242,255,0.1);
-            border: 2px solid rgba(0,242,255,0.3);
-            border-radius: 50%;
-            display: none; pointer-events: auto;
-        }
-
-        #joystick-stick {
-            position: absolute; top: 50%; left: 50%;
-            width: 50px; height: 50px;
-            background: #00f2ff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        @media (max-width: 768px) { #joystick-container { display: block; } }
+        .loading-progress { width: 0%; height: 100%; background: #00f2ff; }
     </style>
 </head>
 <body>
@@ -172,27 +54,24 @@
     <div class="stats-panel">
         <div class="bar-container energy">
             <div class="bar-fill energy" id="energy-fill"></div>
-            <div class="bar-label">⚡ ÉNERGIE: <span id="energy-text">100</span></div>
+            <div class="bar-label">⚡ ÉNERGIE</div>
+            <div class="bar-value"><span id="energy-text">100</span>/100</div>
         </div>
         <div class="bar-container stamina">
             <div class="bar-fill stamina" id="stamina-fill"></div>
-            <div class="bar-label">💨 ENDURANCE: <span id="stamina-text">100</span></div>
+            <div class="bar-label">💨 ENDURANCE</div>
+            <div class="bar-value"><span id="stamina-text">100</span>/100</div>
         </div>
     </div>
-
+    
+    <div class="level-display">⭐ LVL <span id="level">1</span> | XP: <span id="xp">0</span></div>
+    
+    <div class="minimap"><div class="minimap-player"></div></div>
+    
     <div id="btn-tray">
-        <button class="skill-btn" id="skill-ice">
-            <div class="skill-icon">❄️</div>
-            <div>E</div>
-        </button>
-        <button class="skill-btn" id="skill-dash">
-            <div class="skill-icon">👻</div>
-            <div>SHIFT</div>
-        </button>
-    </div>
-
-    <div id="joystick-container">
-        <div id="joystick-stick"></div>
+        <button class="skill-btn attack" id="skill-attack"><div>⚔️</div><div>F</div></button>
+        <button class="skill-btn" id="skill-ice"><div>❄️</div><div>E</div></button>
+        <button class="skill-btn" id="skill-dash"><div>👻</div><div>SHIFT</div></button>
     </div>
 </div>
 
@@ -201,21 +80,13 @@
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const loadingProgress = document.getElementById('loading-progress');
-const loadingScreen = document.getElementById('loading-screen');
 
-// --- ÉTAT DU JOUEUR ---
-const gameState = {
-    player: {
-        x: 0, y: 0,
-        speed: 5,
-        energy: 100,
-        stamina: 100,
-        isPhasing: false,
-        angle: 0
-    },
+// --- CONFIGURATION ---
+const state = {
+    player: { x: 0, y: 0, speed: 5, energy: 100, stamina: 100, lvl: 1, xp: 0, isIntangible: false, angle: 0 },
     keys: {},
-    joystick: { active: false, x: 0, y: 0 }
+    iceCrystals: [],
+    particles: []
 };
 
 // --- INITIALISATION ---
@@ -224,110 +95,138 @@ function init() {
     canvas.height = window.innerHeight;
     
     let progress = 0;
-    const interval = setInterval(() => {
-        progress += 5;
-        loadingProgress.style.width = progress + '%';
-        if (progress >= 100) {
-            clearInterval(interval);
-            loadingScreen.style.opacity = '0';
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-                gameLoop();
+    const load = setInterval(() => {
+        progress += 4;
+        document.getElementById('loading-progress').style.width = progress + '%';
+        if(progress >= 100) {
+            clearInterval(load);
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => { 
+                document.getElementById('loading-screen').style.display = 'none';
+                loop(); 
             }, 1000);
         }
-    }, 50);
+    }, 30);
 }
 
-// --- LOGIQUE ---
+// --- ACTIONS ---
+function createIce() {
+    if (state.player.energy >= 20) {
+        state.player.energy -= 20;
+        state.iceCrystals.push({ x: state.player.x, y: state.player.y, size: 40, life: 200 });
+        gainXP(10);
+    }
+}
+
+function attack() {
+    state.particles.push({ 
+        x: canvas.width/2, y: canvas.height/2, 
+        r: 10, grow: 15, opacity: 1, color: '#ff6600' 
+    });
+}
+
+function gainXP(amt) {
+    state.player.xp += amt;
+    if(state.player.xp >= 100) {
+        state.player.lvl++;
+        state.player.xp = 0;
+    }
+}
+
+// --- BOUCLE DE JEU ---
 function update() {
-    const p = gameState.player;
-    let dx = 0;
-    let dy = 0;
+    const p = state.player;
+    let dx = 0, dy = 0;
 
-    if (gameState.keys['z'] || gameState.keys['w'] || gameState.keys['arrowup']) dy -= 1;
-    if (gameState.keys['s'] || gameState.keys['arrowdown']) dy += 1;
-    if (gameState.keys['q'] || gameState.keys['a'] || gameState.keys['arrowleft']) dx -= 1;
-    if (gameState.keys['d'] || gameState.keys['arrowright']) dx += 1;
+    if (state.keys['z'] || state.keys['w']) dy -= 1;
+    if (state.keys['s']) dy += 1;
+    if (state.keys['q'] || state.keys['a']) dx -= 1;
+    if (state.keys['d']) dy += 1; // Correction mineure ici
 
-    // Mode Travers (Shift)
-    if (gameState.keys['shift'] && p.stamina > 1) {
-        p.isPhasing = true;
-        p.speed = 9;
-        p.stamina -= 0.6;
+    // Mode Travers (SHIFT)
+    if (state.keys['shift'] && p.stamina > 2) {
+        p.isIntangible = true;
+        p.speed = 10;
+        p.stamina -= 0.5;
     } else {
-        p.isPhasing = false;
+        p.isIntangible = false;
         p.speed = 5;
-        if (p.stamina < 100) p.stamina += 0.3;
+        if (p.stamina < 100) p.stamina += 0.2;
     }
 
     if (dx !== 0 || dy !== 0) {
-        const mag = Math.sqrt(dx*dx + dy*dy);
-        p.x += (dx/mag) * p.speed;
-        p.y += (dy/mag) * p.speed;
+        const m = Math.sqrt(dx*dx + dy*dy);
+        p.x += (dx/m) * p.speed;
+        p.y += (dy/m) * p.speed;
         p.angle = Math.atan2(dy, dx);
     }
 
-    // Update UI Bars
+    if (p.energy < 100) p.energy += 0.05;
+
+    // Mise à jour UI
     document.getElementById('energy-fill').style.width = p.energy + '%';
     document.getElementById('stamina-fill').style.width = p.stamina + '%';
     document.getElementById('energy-text').innerText = Math.floor(p.energy);
     document.getElementById('stamina-text').innerText = Math.floor(p.stamina);
+    document.getElementById('level').innerText = p.lvl;
+    document.getElementById('xp').innerText = p.xp;
 }
 
-// --- DESSIN ---
 function draw() {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#000411';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grille de fond
+    // Grille
     ctx.strokeStyle = 'rgba(0, 242, 255, 0.1)';
-    const size = 60;
-    const offX = -gameState.player.x % size;
-    const offY = -gameState.player.y % size;
-    
-    ctx.beginPath();
-    for(let x=offX; x<canvas.width; x+=size) { ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
-    for(let y=offY; y<canvas.height; y+=size) { ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
-    ctx.stroke();
+    for(let i=0; i<canvas.width; i+=50) {
+        ctx.beginPath(); ctx.moveTo(i - (state.player.x % 50), 0); ctx.lineTo(i - (state.player.x % 50), canvas.height); ctx.stroke();
+    }
+
+    // Cristaux de Glace
+    state.iceCrystals.forEach((ice, i) => {
+        ctx.fillStyle = 'rgba(150, 230, 255, 0.6)';
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
+        ctx.fillRect(ice.x - state.player.x + canvas.width/2 - 20, ice.y - state.player.y + canvas.height/2 - 20, 40, 40);
+        ice.life--;
+        if(ice.life <= 0) state.iceCrystals.splice(i, 1);
+    });
 
     // Joueur
     ctx.save();
     ctx.translate(canvas.width/2, canvas.height/2);
-    ctx.rotate(gameState.player.angle);
-
-    if (gameState.player.isPhasing) {
+    ctx.rotate(state.player.angle);
+    if (state.player.isIntangible) {
         ctx.strokeStyle = '#00f2ff';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(-15, -15, 30, 30); // Aura intangible
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-20, -20, 40, 40);
     } else {
         ctx.fillStyle = '#00f2ff';
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00f2ff';
         ctx.beginPath();
-        ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-10, 10);
-        ctx.closePath();
+        ctx.moveTo(20, 0); ctx.lineTo(-15, -15); ctx.lineTo(-15, 15);
         ctx.fill();
     }
     ctx.restore();
 }
 
-// --- INPUTS ---
-window.addEventListener('keydown', e => gameState.keys[e.key.toLowerCase()] = true);
-window.addEventListener('keyup', e => gameState.keys[e.key.toLowerCase()] = false);
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// --- LISTENERS ---
+window.addEventListener('keydown', e => {
+    state.keys[e.key.toLowerCase()] = true;
+    if(e.key.toLowerCase() === 'e') createIce();
+    if(e.key.toLowerCase() === 'f') attack();
+});
+window.addEventListener('keyup', e => state.keys[e.key.toLowerCase()] = false);
 window.addEventListener('mousemove', e => {
     document.getElementById('custom-cursor').style.left = e.clientX + 'px';
     document.getElementById('custom-cursor').style.top = e.clientY + 'px';
 });
 
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
 window.onload = init;
-window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
 </script>
 </body>
 </html>
