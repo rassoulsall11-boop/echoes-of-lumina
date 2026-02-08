@@ -4,328 +4,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jeu Labyrinthe Mobile</title>
+    <title>Neon Orbit Game</title>
     <style>
+        /* --- STYLE CSS --- */
         body {
-            background-color: #222;
-            color: white;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
-            overflow: hidden; /* Empêche le scroll sur mobile */
-        }
-
-        h1 { margin: 10px 0; font-size: 20px; text-align: center; }
-
-        /* Le conteneur du jeu */
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            border: 2px solid #555;
+            overflow: hidden;
+            background-color: #050505; /* Noir profond */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Empêche le zoom sur mobile */
         }
 
         canvas {
-            background-color: #eee;
             display: block;
         }
 
-        /* Contrôles tactiles (D-Pad) */
-        #controls {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: 60px 60px 60px;
-            grid-template-rows: 60px 60px;
-            gap: 10px;
-            user-select: none; /* Empêche la sélection de texte */
+        /* Interface Utilisateur (UI) */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Laisse passer les clics vers le canvas */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 3rem;
+            margin: 0;
+            text-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        p {
+            color: #aaa;
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 20px;
+            font-size: 2.5rem;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 10px #fff;
+            display: none;
         }
 
         .btn {
-            width: 60px;
-            height: 60px;
-            background-color: #444;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            pointer-events: auto; /* Active les clics sur le bouton */
+            background: transparent;
+            color: #00eaff;
+            border: 2px solid #00eaff;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            margin-top: 30px;
             cursor: pointer;
-            touch-action: manipulation; /* Optimisation tactile */
-            box-shadow: 0 4px 0 #222;
-            transition: transform 0.1s;
+            border-radius: 50px;
+            box-shadow: 0 0 10px #00eaff;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-weight: bold;
         }
 
-        .btn:active, .btn.pressed {
-            transform: translateY(4px);
-            box-shadow: none;
-            background-color: #666;
+        .btn:hover {
+            background: #00eaff;
+            color: #000;
+            box-shadow: 0 0 20px #00eaff, 0 0 40px #00eaff;
         }
 
-        /* Positionnement des flèches dans la grille */
-        #btn-up { grid-column: 2; grid-row: 1; }
-        #btn-left { grid-column: 1; grid-row: 2; }
-        #btn-down { grid-column: 2; grid-row: 2; }
-        #btn-right { grid-column: 3; grid-row: 2; }
+        #start-screen, #game-over-screen {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
 
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Trouve la sortie !</h1>
+    <!-- Canvas du jeu -->
+    <canvas id="gameCanvas"></canvas>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
+    <!-- Interface -->
+    <div id="ui-layer">
+        <div id="score-board">0</div>
+
+        <div id="start-screen">
+            <h1>Neon Orbit</h1>
+            <p>Touchez l'écran pour changer de direction.</p>
+            <p>Évitez les obstacles rouges.</p>
+            <button class="btn" id="startBtn">JOUER</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>GAME OVER</h1>
+            <p>Score Final : <span id="final-score">0</span></p>
+            <button class="btn" id="restartBtn">REJOUER</button>
+        </div>
     </div>
 
-    <!-- Contrôles tactiles -->
-    <div id="controls">
-        <div class="btn" id="btn-up">▲</div>
-        <div class="btn" id="btn-left">◀</div>
-        <div class="btn" id="btn-down">▼</div>
-        <div class="btn" id="btn-right">▶</div>
-    </div>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // --- Configuration ---
-    const TILE_SIZE = 32; // Taille d'une case
-    const SPEED = 2.5;    // Vitesse du joueur
-    
-    // 1 = Mur, 0 = Sol, 2 = Départ, 3 = Sortie
-    // La carte est conçue avec des couloirs verticaux pour les ennemis
-    const map = [
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,2,0,0,1,0,0,0,1,0,0,0,0,0,1],
-        [1,1,1,0,1,0,1,0,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,1,0,0,0,0,0,1,0,1],
-        [1,0,1,1,1,1,1,1,1,1,1,0,1,0,1],
-        [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
-        [1,1,1,0,1,0,1,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,1,3,1,0,0,0,0,0,1],
-        [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-    ];
-
-    const rows = map.length;
-    const cols = map[0].length;
-
-    canvas.width = cols * TILE_SIZE;
-    canvas.height = rows * TILE_SIZE;
-
-    // --- Joueur ---
-    let player = {
-        x: TILE_SIZE, // Position initiale (sera écrasée par initGame)
-        y: TILE_SIZE,
-        size: TILE_SIZE - 8, // Un peu plus petit que la case pour faciliter le passage
-        dx: 0,
-        dy: 0
-    };
-
-    // --- Ennemis ---
-    // x, y : position en cases, range: distance de patrouille, speed: vitesse
-    let enemies = [
-        { x: 5, y: 1, startY: 1, range: 4, speed: 2, dir: 1, color: 'red' },
-        { x: 7, y: 5, startY: 3, range: 4, speed: 1.5, dir: 1, color: 'red' },
-        { x: 11, y: 1, startY: 1, range: 4, speed: 3, dir: 1, color: 'darkred' },
-        { x: 3, y: 5, startY: 5, range: 3, speed: 2, dir: -1, color: 'red' }
-    ];
-
-    // --- Entrées (Contrôles) ---
-    let keys = {
-        ArrowUp: false,
-        ArrowDown: false,
-        ArrowLeft: false,
-        ArrowRight: false
-    };
-
-    // Gestion Clavier (PC)
-    window.addEventListener('keydown', (e) => {
-        if(keys.hasOwnProperty(e.code)) keys[e.code] = true;
-    });
-    window.addEventListener('keyup', (e) => {
-        if(keys.hasOwnProperty(e.code)) keys[e.code] = false;
-    });
-
-    // Gestion Tactile (Mobile)
-    const setupTouchBtn = (id, key) => {
-        const btn = document.getElementById(id);
+    <script>
+        /* --- LOGIQUE JAVASCRIPT --- */
         
-        // Souris et Tactile
-        const start = (e) => { 
-            e.preventDefault(); 
-            keys[key] = true; 
-            btn.classList.add('pressed'); 
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Éléments UI
+        const scoreEl = document.getElementById('score-board');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreEl = document.getElementById('final-score');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Variables de jeu
+        let isPlaying = false;
+        let score = 0;
+        let scoreInterval;
+        let animationId;
+        
+        // Dimensions
+        let centerX, centerY;
+        let orbitRadius = 100; // Rayon de l'orbite de la bille
+
+        // Objets
+        const player = {
+            angle: 0,
+            radius: 10,
+            color: '#00eaff', // Bleu Cyan Néon
+            speed: 0.05,
+            direction: 1, // 1 = horaire, -1 = anti-horaire
+            x: 0,
+            y: 0
         };
-        const end = (e) => { 
-            e.preventDefault(); 
-            keys[key] = false; 
-            btn.classList.remove('pressed'); 
-        };
 
-        btn.addEventListener('touchstart', start, {passive: false});
-        btn.addEventListener('touchend', end, {passive: false});
-        btn.addEventListener('mousedown', start);
-        btn.addEventListener('mouseup', end);
-        btn.addEventListener('mouseleave', end);
-    };
+        let enemies = [];
+        let spawnRate = 60; // Frames entre chaque apparition
+        let frameCount = 0;
 
-    setupTouchBtn('btn-up', 'ArrowUp');
-    setupTouchBtn('btn-down', 'ArrowDown');
-    setupTouchBtn('btn-left', 'ArrowLeft');
-    setupTouchBtn('btn-right', 'ArrowRight');
+        // Configuration initiale du canvas
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+            
+            // Ajuster le rayon pour mobile
+            if (canvas.width < 600) {
+                orbitRadius = 80;
+            } else {
+                orbitRadius = 120;
+            }
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
-    // --- Logique du Jeu ---
+        // --- CLASSE ENNEMI ---
+        class Enemy {
+            constructor() {
+                // Apparaît aléatoirement sur un bord de l'écran
+                const edge = Math.floor(Math.random() * 4); // 0: Haut, 1: Droite, 2: Bas, 3: Gauche
+                
+                if (edge === 0) { // Haut
+                    this.x = Math.random() * canvas.width;
+                    this.y = -20;
+                } else if (edge === 1) { // Droite
+                    this.x = canvas.width + 20;
+                    this.y = Math.random() * canvas.height;
+                } else if (edge === 2) { // Bas
+                    this.x = Math.random() * canvas.width;
+                    this.y = canvas.height + 20;
+                } else { // Gauche
+                    this.x = -20;
+                    this.y = Math.random() * canvas.height;
+                }
 
-    function initGame() {
-        // Trouver la position de départ (2)
-        for(let r=0; r<rows; r++) {
-            for(let c=0; c<cols; c++) {
-                if(map[r][c] === 2) {
-                    player.x = c * TILE_SIZE + 4;
-                    player.y = r * TILE_SIZE + 4;
+                this.size = 15;
+                this.color = '#ff0055'; // Rouge Néon
+                
+                // Calcul du vecteur vers le centre
+                const dx = centerX - this.x;
+                const dy = centerY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                this.speed = 2 + (score * 0.05); // La vitesse augmente légèrement avec le score
+                this.vx = (dx / distance) * this.speed;
+                this.vy = (dy / distance) * this.speed;
+                
+                // Rotation propre à l'obstacle pour le style
+                this.angle = 0;
+                this.rotSpeed = (Math.random() - 0.5) * 0.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.angle += this.rotSpeed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        // --- FONCTIONS DE JEU ---
+
+        function startGame() {
+            isPlaying = true;
+            score = 0;
+            enemies = [];
+            player.angle = 0;
+            frameCount = 0;
+            spawnRate = 60;
+            
+            scoreEl.textContent = "0";
+            scoreEl.style.display = 'block';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            // Timer de score (1 point par seconde)
+            if (scoreInterval) clearInterval(scoreInterval);
+            scoreInterval = setInterval(() => {
+                if(isPlaying) {
+                    score++;
+                    scoreEl.textContent = score;
+                    // Augmente la difficulté
+                    if(spawnRate > 20) spawnRate -= 1; 
+                }
+            }, 1000);
+
+            gameLoop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            clearInterval(scoreInterval);
+            
+            finalScoreEl.textContent = score;
+            scoreEl.style.display = 'none';
+            gameOverScreen.classList.remove('hidden');
+            
+            // Effet d'explosion visuelle (simple flash rouge)
+            ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function update() {
+            // Mouvement du joueur
+            player.angle += player.speed * player.direction;
+            player.x = centerX + Math.cos(player.angle) * orbitRadius;
+            player.y = centerY + Math.sin(player.angle) * orbitRadius;
+
+            // Gestion des ennemis
+            frameCount++;
+            if (frameCount % spawnRate === 0) {
+                enemies.push(new Enemy());
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.update();
+
+                // Collision avec le joueur
+                const distPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+                if (distPlayer < player.radius + e.size / 2) {
+                    gameOver();
+                }
+
+                // Supprimer si atteint le centre (optionnel, ici on considère que le centre est "safe" mais le joueur orbite autour)
+                // Dans ce design, si l'ennemi traverse tout l'écran, on le supprime
+                const distCenter = Math.hypot(centerX - e.x, centerY - e.y);
+                if (distCenter < 5) {
+                    enemies.splice(i, 1);
                 }
             }
         }
-    }
 
-    // Vérifie si un rectangle (joueur) touche un mur
-    function checkWallCollision(newX, newY) {
-        // Points aux 4 coins du joueur
-        const points = [
-            {x: newX, y: newY},
-            {x: newX + player.size, y: newY},
-            {x: newX, y: newY + player.size},
-            {x: newX + player.size, y: newY + player.size}
-        ];
+        function draw() {
+            // Effacer l'écran avec un léger sillage (trail effect) pour fluidité
+            // ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)'; // Fond semi-transparent pour effet de traînée
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        for (let p of points) {
-            const col = Math.floor(p.x / TILE_SIZE);
-            const row = Math.floor(p.y / TILE_SIZE);
+            // Dessiner l'orbite (cercle fin)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Dessiner le noyau central (décoratif)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.fill();
+
+            // Dessiner le Joueur
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = player.color;
+            ctx.fill();
+
+            // Dessiner les Ennemis
+            enemies.forEach(e => e.draw());
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            update();
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- ENTRÉES UTILISATEUR ---
+
+        function handleInput(e) {
+            // Si on clique sur un bouton, on ne fait rien ici
+            if (e.target.tagName === 'BUTTON') return;
             
-            // Si hors map ou mur
-            if (map[row] && map[row][col] === 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Vérifie la victoire
-    function checkExit() {
-        const centerX = player.x + player.size / 2;
-        const centerY = player.y + player.size / 2;
-        const col = Math.floor(centerX / TILE_SIZE);
-        const row = Math.floor(centerY / TILE_SIZE);
-
-        if (map[row][col] === 3) {
-            alert("Bravo ! Vous avez trouvé la sortie !");
-            initGame();
-        }
-    }
-
-    function update() {
-        // Mouvement Joueur
-        let nextX = player.x;
-        let nextY = player.y;
-
-        if (keys.ArrowUp) nextY -= SPEED;
-        if (keys.ArrowDown) nextY += SPEED;
-        if (keys.ArrowLeft) nextX -= SPEED;
-        if (keys.ArrowRight) nextX += SPEED;
-
-        // Collision axe X
-        if (!checkWallCollision(nextX, player.y)) {
-            player.x = nextX;
-        }
-        // Collision axe Y
-        if (!checkWallCollision(player.x, nextY)) {
-            player.y = nextY;
-        }
-
-        // Mouvement Ennemis
-        enemies.forEach(enemy => {
-            // Calcul de la position réelle en pixels
-            let enemyPixelY = enemy.y * TILE_SIZE;
-            
-            // Mise à jour de la position virtuelle
-            enemy.y += (enemy.speed * enemy.dir) / TILE_SIZE;
-
-            // Logique de patrouille (Haut / Bas)
-            if (enemy.y > enemy.startY + enemy.range || enemy.y < enemy.startY) {
-                enemy.dir *= -1; // Inverse la direction
-            }
-
-            // Collision Joueur vs Ennemi (AABB simple)
-            let ex = enemy.x * TILE_SIZE;
-            let ey = enemy.y * TILE_SIZE;
-            
-            if (
-                player.x < ex + TILE_SIZE &&
-                player.x + player.size > ex &&
-                player.y < ey + TILE_SIZE &&
-                player.y + player.size > ey
-            ) {
-                // Touché !
-                initGame(); // Reset
-            }
-        });
-
-        checkExit();
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Dessiner la carte
-        for(let r=0; r<rows; r++) {
-            for(let c=0; c<cols; c++) {
-                let tile = map[r][c];
-                if(tile === 1) {
-                    ctx.fillStyle = '#333'; // Mur
-                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                } else if (tile === 3) {
-                    ctx.fillStyle = '#4CAF50'; // Sortie
-                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
+            if (isPlaying) {
+                player.direction *= -1; // Inverser la rotation
             }
         }
 
-        // Dessiner les ennemis
-        enemies.forEach(enemy => {
-            ctx.fillStyle = enemy.color;
-            // On dessine l'ennemi un peu plus petit que la case
-            ctx.fillRect(
-                enemy.x * TILE_SIZE + 2, 
-                enemy.y * TILE_SIZE + 2, 
-                TILE_SIZE - 4, 
-                TILE_SIZE - 4
-            );
-        });
+        // Support souris et tactile
+        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('touchstart', (e) => {
+            // e.preventDefault(); // Empêcher le comportement par défaut (scroll) si nécessaire
+            handleInput(e);
+        }, {passive: false});
 
-        // Dessiner le joueur
-        ctx.fillStyle = '#2196F3';
-        ctx.fillRect(player.x, player.y, player.size, player.size);
-    }
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
 
-    function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    }
-
-    // Démarrage
-    initGame();
-    loop();
-
-</script>
+    </script>
 </body>
 </html>
 ```
-
-### Explications Rapides
