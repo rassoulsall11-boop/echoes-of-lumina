@@ -3,294 +3,119 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>KINETIC PHANTOM // NEXUS ARCHITECT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus Mobile Prototype</title>
     <style>
-        body {
+        body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Empêche le scroll */
             background-color: #1a1a1a;
-            color: #00ffcc;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
+            touch-action: none; /* Désactive les gestes par défaut du navigateur */
         }
 
-        #gameContainer {
+        #game-container {
             position: relative;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
-            border: 2px solid #333;
+            width: 100%;
+            height: 100%;
         }
 
         canvas {
             display: block;
-            background-color: #2b2b2b; /* Sol gris foncé */
+            width: 100%;
+            height: 100%;
         }
 
+        /* UI LAYER */
         #ui-layer {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            pointer-events: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Permet de voir le jeu à travers */
         }
 
-        .status-text {
-            font-size: 14px;
-            text-shadow: 1px 1px 0 #000;
-        }
-
-        #gameOverScreen {
+        /* JOYSTICK (GAUCHE) */
+        #joystick-zone {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
+            bottom: 50px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: auto; /* Réactive le tactile ici */
         }
 
-        h1 { margin: 0 0 20px 0; color: #ff3333; text-transform: uppercase; letter-spacing: 5px; }
-        .win { color: #00ffcc !important; }
-        
-        button {
-            background: transparent;
-            border: 1px solid #00ffcc;
-            color: #00ffcc;
-            padding: 10px 20px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.3s;
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #00ffff;
+            transition: transform 0.1s; /* Retour au centre fluide */
         }
-        button:hover { background: #00ffcc; color: #000; }
+
+        /* BOUTON PHASING (DROITE) */
+        #phase-btn {
+            position: absolute;
+            bottom: 60px;
+            right: 50px;
+            width: 90px;
+            height: 90px;
+            background: rgba(255, 0, 100, 0.5);
+            border: 2px solid rgba(255, 0, 100, 0.8);
+            border-radius: 50%;
+            pointer-events: auto;
+            color: white;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #phase-btn:active, #phase-btn.active {
+            background: rgba(255, 0, 100, 0.9);
+            box-shadow: 0 0 15px #ff0064;
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
 
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <div id="ui-layer">
-            <div class="status-text">ÉTAT DU SYSTÈME: <span id="systemState">NOMINAL</span></div>
-            <div class="status-text">ÉNERGIE CINÉTIQUE: <span id="kineticStatus">INACTIF</span></div>
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-layer">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
         </div>
-
-        <div id="gameOverScreen">
-            <h1 id="endTitle">ÉCHEC CRITIQUE</h1>
-            <p id="endReason" style="color: #fff; margin-bottom: 20px;"></p>
-            <button onclick="nexusGame.reset()">RÉINITIALISER LA SIMULATION</button>
-        </div>
+        <div id="phase-btn">PHASE</div>
     </div>
+</div>
 
 <script>
-/**
- * NEXUS ARCHITECT v2.0
- * Module: Core Game Logic
- */
+    // Injection du script JS ci-dessous
+</script>
+</body>
+</html>
+```
 
-const CONFIG = {
-    PLAYER_SPEED: 4,
-    PLAYER_SIZE: 20,
-    ENERGY_MAX: 100,
-    ENERGY_DRAIN: 1.5,       // Coût par frame du mode Travers
-    ENERGY_RECHARGE: 0.8,    // Gain par frame si mouvement
-    COLOR_WALL: '#000000',
-    COLOR_PLAYER_NORMAL: '#00ff00',
-    COLOR_PLAYER_PHASE: 'rgba(0, 150, 255, 0.4)', // Bleu transparent
-    COLOR_PORTAL: '#9900ff'
-};
-
-class Game {
-    constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        
-        // Input State
-        this.keys = {
-            ArrowUp: false, ArrowDown: false, 
-            ArrowLeft: false, ArrowRight: false, 
-            w: false, s: false, a: false, d: false,
-            " ": false // Espace
-        };
-
-        // Game State
-        this.isRunning = true;
-        this.player = {
-            x: 50, y: 50,
-            w: CONFIG.PLAYER_SIZE, h: CONFIG.PLAYER_SIZE,
-            energy: CONFIG.ENERGY_MAX,
-            isPhasing: false
-        };
-
-        // Level Design (Murs noirs)
-        this.walls = [
-            {x: 150, y: 0, w: 50, h: 400},
-            {x: 150, y: 500, w: 50, h: 100},
-            {x: 350, y: 200, w: 50, h: 400},
-            {x: 350, y: 0, w: 50, h: 100},
-            {x: 550, y: 0, w: 50, h: 500}, // Mur presque complet
-            {x: 0, y: 0, w: 800, h: 10},   // Bordures
-            {x: 0, y: 590, w: 800, h: 10},
-            {x: 0, y: 0, w: 10, h: 600},
-            {x: 790, y: 0, w: 10, h: 600}
-        ];
-
-        this.portal = { x: 700, y: 520, w: 40, h: 40 };
-
-        // Bindings
-        window.addEventListener('keydown', e => this.handleKey(e, true));
-        window.addEventListener('keyup', e => this.handleKey(e, false));
-
-        this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
-    }
-
-    handleKey(e, state) {
-        if(this.keys.hasOwnProperty(e.key) || e.key === " ") {
-            this.keys[e.key] = state;
-        }
-    }
-
-    reset() {
-        this.player.x = 50;
-        this.player.y = 50;
-        this.player.energy = CONFIG.ENERGY_MAX;
-        this.player.isPhasing = false;
-        this.isRunning = true;
-        document.getElementById('gameOverScreen').style.display = 'none';
-        this.loop();
-    }
-
-    update() {
-        if (!this.isRunning) return;
-
-        // 1. Gestion du mode Travers (Phasing)
-        // Activation seulement si Espace appuyé ET énergie > 0
-        if (this.keys[" "] && this.player.energy > 0) {
-            this.player.isPhasing = true;
-            this.player.energy -= CONFIG.ENERGY_DRAIN;
-        } else {
-            this.player.isPhasing = false;
-        }
-
-        // Clamp Energy
-        if (this.player.energy < 0) this.player.energy = 0;
-        if (this.player.energy > CONFIG.ENERGY_MAX) this.player.energy = CONFIG.ENERGY_MAX;
-
-        // 2. Mouvement
-        let dx = 0;
-        let dy = 0;
-        if (this.keys.ArrowUp || this.keys.w) dy = -CONFIG.PLAYER_SPEED;
-        if (this.keys.ArrowDown || this.keys.s) dy = CONFIG.PLAYER_SPEED;
-        if (this.keys.ArrowLeft || this.keys.a) dx = -CONFIG.PLAYER_SPEED;
-        if (this.keys.ArrowRight || this.keys.d) dx = CONFIG.PLAYER_SPEED;
-
-        // Normalisation diagonale
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.707;
-            dy *= 0.707;
-        }
-
-        // 3. Recharge Cinétique
-        // On ne recharge que si on bouge ET qu'on n'est pas en mode Travers
-        const isMoving = dx !== 0 || dy !== 0;
-        if (isMoving && !this.player.isPhasing) {
-            this.player.energy += CONFIG.ENERGY_RECHARGE;
-            document.getElementById('kineticStatus').textContent = "CHARGE EN COURS...";
-            document.getElementById('kineticStatus').style.color = "#00ff00";
-        } else if (this.player.isPhasing) {
-            document.getElementById('kineticStatus').textContent = "DRAINAGE RAPIDE";
-            document.getElementById('kineticStatus').style.color = "#ff0000";
-        } else {
-            document.getElementById('kineticStatus').textContent = "STABLE";
-            document.getElementById('kineticStatus').style.color = "#00ffcc";
-        }
-
-        // 4. Physique prédictive (Collision Murs)
-        let nextX = this.player.x + dx;
-        let nextY = this.player.y + dy;
-
-        // Si on n'est PAS en phasing, on vérifie les collisions
-        if (!this.player.isPhasing) {
-            // Check X
-            if (!this.checkCollision(nextX, this.player.y)) {
-                this.player.x = nextX;
-            }
-            // Check Y
-            if (!this.checkCollision(this.player.x, nextY)) {
-                this.player.y = nextY;
-            }
-        } else {
-            // Mode Travers : On bouge librement (sauf limites canvas)
-            this.player.x = nextX;
-            this.player.y = nextY;
-            
-            // Contraindre aux limites du canvas (on ne traverse pas la réalité)
-            this.player.x = Math.max(0, Math.min(this.canvas.width - this.player.w, this.player.x));
-            this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.h, this.player.y));
-        }
-
-        // 5. Conditions de Victoire / Défaite
-        
-        // Victoire : Collision Portail
-        if (this.rectIntersect(this.player.x, this.player.y, this.player.w, this.player.h,
-                               this.portal.x, this.portal.y, this.portal.w, this.portal.h)) {
-            this.endGame(true, "Extraction Réussie.");
-            return;
-        }
-
-        // Défaite Critique : Matérialisation dans un mur
-        // Si le joueur n'est plus en phasing (énergie vide ou touche relâchée)
-        // et qu'il est DANS un mur.
-        if (!this.player.isPhasing && this.checkCollision(this.player.x, this.player.y)) {
-            this.endGame(false, "ANOMALIE : Matérialisation à l'intérieur d'un solide. Structure moléculaire détruite.");
-        }
-        
-        // Update UI
-        document.getElementById('systemState').textContent = this.player.isPhasing ? "SPECTRAL (TRAVERS)" : "SOLIDE";
-        document.getElementById('systemState').style.color = this.player.isPhasing ? "#0096ff" : "#00ffcc";
-    }
-
-    // Retourne true si collision avec un mur
-    checkCollision(x, y) {
-        for (let wall of this.walls) {
-            if (this.rectIntersect(x, y, this.player.w, this.player.h, wall.x, wall.y, wall.w, wall.h)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) {
-        return x2 < x1 + w1 && x2 + w2 > x1 && y2 < y1 + h1 && y2 + h2 > y1;
-    }
-
-    draw() {
-        // Clear
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Draw Walls
-        this.ctx.fillStyle = CONFIG.COLOR_WALL;
-        for (let wall of this.walls) {
-            this.ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-        }
-
-        // Draw Portal
-        this.ctx.fillStyle = CONFIG.COLOR_PORTAL;
-        this.ctx.shadowBlur = 20;
-        this.ctx.shadowColor = CONFIG.COLOR_PORTAL;
-        this.ctx.fillRect(this.portal.x, this.portal.y, this.portal.w, this.portal.h);
-        this.ctx.shadowBlur = 0;
-
-        // Draw Player
-        this.ctx.fillStyle = this.player.isPhasing ? CONFIG.COLOR_PLAYER_PHASE : CONFIG.COLOR_PLAYER_NORMAL;
-        if (this.player.isPhasing) {
-             // Effet visuel spectral (stroke)
-             this.ctx.strokeStyle = '#00ffff';
+### 2. Logique JavaScript (Core Logic)
+= '#00ffff';
              this.ctx.lineWidth = 2;
              this.ctx.strokeRect(this.player.x, this.player.y, this.player.w, this.player.h);
         }
