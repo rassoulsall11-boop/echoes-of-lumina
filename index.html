@@ -4,190 +4,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus Mobile Prototype</title>
+    <title>Jeu Labyrinthe Mobile</title>
     <style>
-        body, html {
+        body {
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Empêche le scroll */
-            background-color: #1a1a1a;
-            touch-action: none; /* Désactive les gestes par défaut du navigateur */
+            overflow: hidden; /* Empêche le scroll sur mobile */
         }
 
+        h1 { margin: 10px 0; font-size: 20px; text-align: center; }
+
+        /* Le conteneur du jeu */
         #game-container {
             position: relative;
-            width: 100%;
-            height: 100%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 2px solid #555;
         }
 
         canvas {
+            background-color: #eee;
             display: block;
-            width: 100%;
-            height: 100%;
         }
 
-        /* UI LAYER */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Permet de voir le jeu à travers */
+        /* Contrôles tactiles (D-Pad) */
+        #controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+            gap: 10px;
+            user-select: none; /* Empêche la sélection de texte */
         }
 
-        /* JOYSTICK (GAUCHE) */
-        #joystick-zone {
-            position: absolute;
-            bottom: 50px;
-            left: 50px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            pointer-events: auto; /* Réactive le tactile ici */
-        }
-
-        #joystick-knob {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 50px;
-            height: 50px;
-            background: rgba(0, 255, 255, 0.8);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px #00ffff;
-            transition: transform 0.1s; /* Retour au centre fluide */
-        }
-
-        /* BOUTON PHASING (DROITE) */
-        #phase-btn {
-            position: absolute;
-            bottom: 60px;
-            right: 50px;
-            width: 90px;
-            height: 90px;
-            background: rgba(255, 0, 100, 0.5);
-            border: 2px solid rgba(255, 0, 100, 0.8);
-            border-radius: 50%;
-            pointer-events: auto;
-            color: white;
-            font-family: monospace;
-            font-weight: bold;
-            font-size: 14px;
-            text-transform: uppercase;
+        .btn {
+            width: 60px;
+            height: 60px;
+            background-color: #444;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            user-select: none;
-            -webkit-user-select: none;
+            font-size: 24px;
+            cursor: pointer;
+            touch-action: manipulation; /* Optimisation tactile */
+            box-shadow: 0 4px 0 #222;
+            transition: transform 0.1s;
         }
 
-        #phase-btn:active, #phase-btn.active {
-            background: rgba(255, 0, 100, 0.9);
-            box-shadow: 0 0 15px #ff0064;
-            transform: scale(0.95);
+        .btn:active, .btn.pressed {
+            transform: translateY(4px);
+            box-shadow: none;
+            background-color: #666;
         }
+
+        /* Positionnement des flèches dans la grille */
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="ui-layer">
-        <div id="joystick-zone">
-            <div id="joystick-knob"></div>
-        </div>
-        <div id="phase-btn">PHASE</div>
+    <h1>Trouve la sortie !</h1>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
     </div>
-</div>
+
+    <!-- Contrôles tactiles -->
+    <div id="controls">
+        <div class="btn" id="btn-up">▲</div>
+        <div class="btn" id="btn-left">◀</div>
+        <div class="btn" id="btn-down">▼</div>
+        <div class="btn" id="btn-right">▶</div>
+    </div>
 
 <script>
-    // Injection du script JS ci-dessous
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- Configuration ---
+    const TILE_SIZE = 32; // Taille d'une case
+    const SPEED = 2.5;    // Vitesse du joueur
+    
+    // 1 = Mur, 0 = Sol, 2 = Départ, 3 = Sortie
+    // La carte est conçue avec des couloirs verticaux pour les ennemis
+    const map = [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,2,0,0,1,0,0,0,1,0,0,0,0,0,1],
+        [1,1,1,0,1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,0,0,1,0,1],
+        [1,0,1,1,1,1,1,1,1,1,1,0,1,0,1],
+        [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+        [1,1,1,0,1,0,1,1,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1,3,1,0,0,0,0,0,1],
+        [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const rows = map.length;
+    const cols = map[0].length;
+
+    canvas.width = cols * TILE_SIZE;
+    canvas.height = rows * TILE_SIZE;
+
+    // --- Joueur ---
+    let player = {
+        x: TILE_SIZE, // Position initiale (sera écrasée par initGame)
+        y: TILE_SIZE,
+        size: TILE_SIZE - 8, // Un peu plus petit que la case pour faciliter le passage
+        dx: 0,
+        dy: 0
+    };
+
+    // --- Ennemis ---
+    // x, y : position en cases, range: distance de patrouille, speed: vitesse
+    let enemies = [
+        { x: 5, y: 1, startY: 1, range: 4, speed: 2, dir: 1, color: 'red' },
+        { x: 7, y: 5, startY: 3, range: 4, speed: 1.5, dir: 1, color: 'red' },
+        { x: 11, y: 1, startY: 1, range: 4, speed: 3, dir: 1, color: 'darkred' },
+        { x: 3, y: 5, startY: 5, range: 3, speed: 2, dir: -1, color: 'red' }
+    ];
+
+    // --- Entrées (Contrôles) ---
+    let keys = {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false
+    };
+
+    // Gestion Clavier (PC)
+    window.addEventListener('keydown', (e) => {
+        if(keys.hasOwnProperty(e.code)) keys[e.code] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if(keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    // Gestion Tactile (Mobile)
+    const setupTouchBtn = (id, key) => {
+        const btn = document.getElementById(id);
+        
+        // Souris et Tactile
+        const start = (e) => { 
+            e.preventDefault(); 
+            keys[key] = true; 
+            btn.classList.add('pressed'); 
+        };
+        const end = (e) => { 
+            e.preventDefault(); 
+            keys[key] = false; 
+            btn.classList.remove('pressed'); 
+        };
+
+        btn.addEventListener('touchstart', start, {passive: false});
+        btn.addEventListener('touchend', end, {passive: false});
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('mouseup', end);
+        btn.addEventListener('mouseleave', end);
+    };
+
+    setupTouchBtn('btn-up', 'ArrowUp');
+    setupTouchBtn('btn-down', 'ArrowDown');
+    setupTouchBtn('btn-left', 'ArrowLeft');
+    setupTouchBtn('btn-right', 'ArrowRight');
+
+    // --- Logique du Jeu ---
+
+    function initGame() {
+        // Trouver la position de départ (2)
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                if(map[r][c] === 2) {
+                    player.x = c * TILE_SIZE + 4;
+                    player.y = r * TILE_SIZE + 4;
+                }
+            }
+        }
+    }
+
+    // Vérifie si un rectangle (joueur) touche un mur
+    function checkWallCollision(newX, newY) {
+        // Points aux 4 coins du joueur
+        const points = [
+            {x: newX, y: newY},
+            {x: newX + player.size, y: newY},
+            {x: newX, y: newY + player.size},
+            {x: newX + player.size, y: newY + player.size}
+        ];
+
+        for (let p of points) {
+            const col = Math.floor(p.x / TILE_SIZE);
+            const row = Math.floor(p.y / TILE_SIZE);
+            
+            // Si hors map ou mur
+            if (map[row] && map[row][col] === 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Vérifie la victoire
+    function checkExit() {
+        const centerX = player.x + player.size / 2;
+        const centerY = player.y + player.size / 2;
+        const col = Math.floor(centerX / TILE_SIZE);
+        const row = Math.floor(centerY / TILE_SIZE);
+
+        if (map[row][col] === 3) {
+            alert("Bravo ! Vous avez trouvé la sortie !");
+            initGame();
+        }
+    }
+
+    function update() {
+        // Mouvement Joueur
+        let nextX = player.x;
+        let nextY = player.y;
+
+        if (keys.ArrowUp) nextY -= SPEED;
+        if (keys.ArrowDown) nextY += SPEED;
+        if (keys.ArrowLeft) nextX -= SPEED;
+        if (keys.ArrowRight) nextX += SPEED;
+
+        // Collision axe X
+        if (!checkWallCollision(nextX, player.y)) {
+            player.x = nextX;
+        }
+        // Collision axe Y
+        if (!checkWallCollision(player.x, nextY)) {
+            player.y = nextY;
+        }
+
+        // Mouvement Ennemis
+        enemies.forEach(enemy => {
+            // Calcul de la position réelle en pixels
+            let enemyPixelY = enemy.y * TILE_SIZE;
+            
+            // Mise à jour de la position virtuelle
+            enemy.y += (enemy.speed * enemy.dir) / TILE_SIZE;
+
+            // Logique de patrouille (Haut / Bas)
+            if (enemy.y > enemy.startY + enemy.range || enemy.y < enemy.startY) {
+                enemy.dir *= -1; // Inverse la direction
+            }
+
+            // Collision Joueur vs Ennemi (AABB simple)
+            let ex = enemy.x * TILE_SIZE;
+            let ey = enemy.y * TILE_SIZE;
+            
+            if (
+                player.x < ex + TILE_SIZE &&
+                player.x + player.size > ex &&
+                player.y < ey + TILE_SIZE &&
+                player.y + player.size > ey
+            ) {
+                // Touché !
+                initGame(); // Reset
+            }
+        });
+
+        checkExit();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Dessiner la carte
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                let tile = map[r][c];
+                if(tile === 1) {
+                    ctx.fillStyle = '#333'; // Mur
+                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                } else if (tile === 3) {
+                    ctx.fillStyle = '#4CAF50'; // Sortie
+                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+
+        // Dessiner les ennemis
+        enemies.forEach(enemy => {
+            ctx.fillStyle = enemy.color;
+            // On dessine l'ennemi un peu plus petit que la case
+            ctx.fillRect(
+                enemy.x * TILE_SIZE + 2, 
+                enemy.y * TILE_SIZE + 2, 
+                TILE_SIZE - 4, 
+                TILE_SIZE - 4
+            );
+        });
+
+        // Dessiner le joueur
+        ctx.fillStyle = '#2196F3';
+        ctx.fillRect(player.x, player.y, player.size, player.size);
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // Démarrage
+    initGame();
+    loop();
+
 </script>
 </body>
 </html>
 ```
 
-### 2. Logique JavaScript (Core Logic)
-= '#00ffff';
-             this.ctx.lineWidth = 2;
-             this.ctx.strokeRect(this.player.x, this.player.y, this.player.w, this.player.h);
-        }
-        this.ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
-
-        // Draw Energy Bar (HUD)
-        this.drawHUD();
-    }
-
-    drawHUD() {
-        const barW = 200;
-        const barH = 15;
-        const x = 10;
-        const y = this.canvas.height - 30;
-
-        // Fond barre
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(x, y, barW, barH);
-
-        // Niveau énergie
-        const pct = this.player.energy / CONFIG.ENERGY_MAX;
-        
-        // Couleur dynamique (Vert -> Rouge)
-        const r = Math.floor(255 * (1 - pct));
-        const g = Math.floor(255 * pct);
-        this.ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
-        
-        this.ctx.fillRect(x, y, barW * pct, barH);
-
-        // Bordure HUD
-        this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x, y, barW, barH);
-        
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '12px Courier New';
-        this.ctx.fillText("BATTERIE", x, y - 5);
-    }
-
-    endGame(win, reason) {
-        this.isRunning = false;
-        const screen = document.getElementById('gameOverScreen');
-        const title = document.getElementById('endTitle');
-        const msg = document.getElementById('endReason');
-        
-        screen.style.display = 'flex';
-        msg.textContent = reason;
-
-        if (win) {
-            title.textContent = "MISSION ACCOMPLIE";
-            title.className = "win";
-        } else {
-            title.textContent = "SIGNAL PERDU";
-            title.className = "";
-        }
-    }
-
-    loop() {
-        if (this.isRunning) {
-            this.update();
-            this.draw();
-            requestAnimationFrame(this.loop);
-        }
-    }
-}
-
-// Initialisation du système
-const nexusGame = new Game();
-
-</script>
-</body>
-</html>
-```
-
-### Analyse Technique des Fonctionnalités
+### Explications Rapides
