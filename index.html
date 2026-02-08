@@ -4,15 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Orbit Game</title>
+    <title>Nexus Arcade Idle Prototype</title>
     <style>
-        /* --- STYLE CSS --- */
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            background-color: #050505; /* Noir profond */
+            background-color: #2c3e50; /* Couleur de fond hors canvas */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Empêche le zoom sur mobile */
+            touch-action: none; /* Empêche le scroll sur mobile */
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
 
         canvas {
@@ -22,346 +30,537 @@
         /* Interface Utilisateur (UI) */
         #ui-layer {
             position: absolute;
-            top: 0;
+            top: 20px;
             left: 0;
             width: 100%;
-            height: 100%;
-            pointer-events: none; /* Laisse passer les clics vers le canvas */
+            pointer-events: none; /* Laisse passer les clics vers le jeu */
             display: flex;
-            flex-direction: column;
             justify-content: center;
-            align-items: center;
-            text-align: center;
         }
 
-        h1 {
-            color: #fff;
-            font-size: 3rem;
-            margin: 0;
-            text-shadow: 0 0 10px #00eaff, 0 0 20px #00eaff;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        p {
-            color: #aaa;
-            font-size: 1.2rem;
-            margin-top: 10px;
-        }
-
-        #score-board {
-            position: absolute;
-            top: 20px;
-            font-size: 2.5rem;
-            color: #fff;
-            font-weight: bold;
-            text-shadow: 0 0 10px #fff;
-            display: none;
-        }
-
-        .btn {
-            pointer-events: auto; /* Active les clics sur le bouton */
-            background: transparent;
-            color: #00eaff;
-            border: 2px solid #00eaff;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            margin-top: 30px;
-            cursor: pointer;
+        .score-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 30px;
             border-radius: 50px;
-            box-shadow: 0 0 10px #00eaff;
-            transition: all 0.2s;
-            text-transform: uppercase;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            font-size: 24px;
             font-weight: bold;
+            color: #27ae60;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid #27ae60;
         }
 
-        .btn:hover {
-            background: #00eaff;
-            color: #000;
-            box-shadow: 0 0 20px #00eaff, 0 0 40px #00eaff;
+        /* Instructions */
+        #tutorial {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            pointer-events: none;
+            animation: fadeOut 5s forwards 3s;
         }
 
-        #start-screen, #game-over-screen {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(5px);
-        }
-
-        .hidden {
-            display: none !important;
+        @keyframes fadeOut {
+            to { opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Canvas du jeu -->
+<div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
-
-    <!-- Interface -->
+    
     <div id="ui-layer">
-        <div id="score-board">0</div>
-
-        <div id="start-screen">
-            <h1>Neon Orbit</h1>
-            <p>Touchez l'écran pour changer de direction.</p>
-            <p>Évitez les obstacles rouges.</p>
-            <button class="btn" id="startBtn">JOUER</button>
-        </div>
-
-        <div id="game-over-screen" class="hidden">
-            <h1>GAME OVER</h1>
-            <p>Score Final : <span id="final-score">0</span></p>
-            <button class="btn" id="restartBtn">REJOUER</button>
+        <div class="score-box">
+            <span>$</span><span id="scoreValue">0</span>
         </div>
     </div>
 
-    <script>
-        /* --- LOGIQUE JAVASCRIPT --- */
+    <div id="tutorial">
+        Glissez pour bouger • Allez en cuisine (Vert) • Vendez au comptoir (Rose)
+    </div>
+</div>
+
+<script>
+/**
+ * NEXUS ENGINE - ARCADE IDLE PROTOTYPE
+ * Optimisé pour la performance et la fluidité (60 FPS)
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('scoreValue');
+
+// --- CONFIGURATION ---
+const CONFIG = {
+    playerSpeed: 6,
+    playerSize: 25,
+    pizzaSize: 22,
+    stackOffset: 6, // Décalage vertical pour l'effet de pile
+    stackLerp: 0.15, // Vitesse de suivi de la pile (plus bas = plus "lourd")
+    sellSpeed: 2.5, // Vitesse de remplissage de la barre de vente
+    kitchenSpawnRate: 60, // Frames entre chaque apparition de pizza
+    maxKitchenPizzas: 8,
+    colors: {
+        bg: '#e0e0e0',
+        kitchen: '#a8e6cf', // Vert pastel
+        kitchenBorder: '#8bd3b8',
+        counter: '#ffaaa5', // Rose pastel
+        counterBorder: '#ff8b85',
+        player: '#3498db',
+        playerShadow: '#2980b9',
+        pizza: '#f39c12',
+        pizzaSide: '#d35400', // Côté sombre pour l'effet 3D
+        pizzaCheese: '#f1c40f'
+    }
+};
+
+// --- ÉTAT DU JEU ---
+let gameState = {
+    money: 0,
+    width: 0,
+    height: 0,
+    frames: 0
+};
+
+// --- ZONES ---
+const zones = {
+    kitchen: { x: 0, y: 0, w: 0, h: 0, label: "CUISINE" },
+    counter: { x: 0, y: 0, w: 0, h: 0, label: "VENTE" }
+};
+
+// --- JOUEUR ---
+const player = {
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    moving: false,
+    stack: [], // Contient les objets pizza
+    sellProgress: 0 // 0 à 100
+};
+
+// --- OBJETS ---
+let worldPizzas = []; // Pizzas au sol
+let particles = [];   // Effets visuels
+
+// --- INPUT (JOYSTICK) ---
+const input = {
+    active: false,
+    originX: 0,
+    originY: 0,
+    currentX: 0,
+    currentY: 0,
+    angle: 0,
+    magnitude: 0
+};
+
+// --- INITIALISATION ---
+function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    
+    // Setup initial positions
+    player.x = gameState.width / 2;
+    player.y = gameState.height / 2;
+
+    setupEvents();
+    requestAnimationFrame(loop);
+}
+
+function resize() {
+    gameState.width = window.innerWidth;
+    gameState.height = window.innerHeight;
+    canvas.width = gameState.width;
+    canvas.height = gameState.height;
+
+    // Définir les zones dynamiquement
+    const zoneSize = Math.min(gameState.width, gameState.height) * 0.35;
+    
+    zones.kitchen = {
+        x: 50,
+        y: 50,
+        w: zoneSize,
+        h: zoneSize,
+        label: "CUISINE"
+    };
+
+    zones.counter = {
+        x: gameState.width - zoneSize - 50,
+        y: gameState.height - zoneSize - 50,
+        w: zoneSize,
+        h: zoneSize,
+        label: "COMPTOIR"
+    };
+}
+
+// --- GESTION DES ENTRÉES ---
+function setupEvents() {
+    const startInput = (x, y) => {
+        input.active = true;
+        input.originX = x;
+        input.originY = y;
+        input.currentX = x;
+        input.currentY = y;
+        input.magnitude = 0;
+    };
+
+    const moveInput = (x, y) => {
+        if (!input.active) return;
+        input.currentX = x;
+        input.currentY = y;
+
+        const dx = input.currentX - input.originX;
+        const dy = input.currentY - input.originY;
         
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        input.angle = Math.atan2(dy, dx);
+        // Limiter la magnitude pour le cercle du joystick
+        const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50); 
+        input.magnitude = dist;
+    };
+
+    const endInput = () => {
+        input.active = false;
+        input.magnitude = 0;
+        player.vx = 0;
+        player.vy = 0;
+    };
+
+    // Souris
+    canvas.addEventListener('mousedown', e => startInput(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
+    window.addEventListener('mouseup', endInput);
+
+    // Tactile
+    canvas.addEventListener('touchstart', e => {
+        startInput(e.touches[0].clientX, e.touches[0].clientY);
+        // e.preventDefault(); // Désactivé pour permettre certains comportements natifs si besoin
+    }, {passive: false});
+    
+    canvas.addEventListener('touchmove', e => {
+        moveInput(e.touches[0].clientX, e.touches[0].clientY);
+        e.preventDefault(); // Important pour empêcher le scroll
+    }, {passive: false});
+    
+    canvas.addEventListener('touchend', endInput);
+}
+
+// --- LOGIQUE DU JEU ---
+function update() {
+    gameState.frames++;
+
+    // 1. Mouvement du Joueur
+    if (input.active && input.magnitude > 5) {
+        player.moving = true;
+        // Normaliser la vitesse
+        const speedRatio = input.magnitude / 50; // 0 à 1
+        player.vx = Math.cos(input.angle) * CONFIG.playerSpeed * speedRatio;
+        player.vy = Math.sin(input.angle) * CONFIG.playerSpeed * speedRatio;
         
-        // Éléments UI
-        const scoreEl = document.getElementById('score-board');
-        const startScreen = document.getElementById('start-screen');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const finalScoreEl = document.getElementById('final-score');
-        const startBtn = document.getElementById('startBtn');
-        const restartBtn = document.getElementById('restartBtn');
+        player.x += player.vx;
+        player.y += player.vy;
 
-        // Variables de jeu
-        let isPlaying = false;
-        let score = 0;
-        let scoreInterval;
-        let animationId;
+        // Limites du monde
+        player.x = Math.max(CONFIG.playerSize, Math.min(gameState.width - CONFIG.playerSize, player.x));
+        player.y = Math.max(CONFIG.playerSize, Math.min(gameState.height - CONFIG.playerSize, player.y));
+    } else {
+        player.moving = false;
+    }
+
+    // 2. Génération Pizzas (Cuisine)
+    if (gameState.frames % CONFIG.kitchenSpawnRate === 0 && worldPizzas.length < CONFIG.maxKitchenPizzas) {
+        // Apparition aléatoire dans la zone cuisine
+        const pSize = CONFIG.pizzaSize;
+        const pX = zones.kitchen.x + pSize + Math.random() * (zones.kitchen.w - pSize*2);
+        const pY = zones.kitchen.y + pSize + Math.random() * (zones.kitchen.h - pSize*2);
         
-        // Dimensions
-        let centerX, centerY;
-        let orbitRadius = 100; // Rayon de l'orbite de la bille
+        worldPizzas.push({ x: pX, y: pY, spawnAnim: 0 });
+    }
 
-        // Objets
-        const player = {
-            angle: 0,
-            radius: 10,
-            color: '#00eaff', // Bleu Cyan Néon
-            speed: 0.05,
-            direction: 1, // 1 = horaire, -1 = anti-horaire
-            x: 0,
-            y: 0
-        };
+    // 3. Collision : Ramasser Pizzas
+    for (let i = worldPizzas.length - 1; i >= 0; i--) {
+        const p = worldPizzas[i];
+        
+        // Animation d'apparition
+        if(p.spawnAnim < 1) p.spawnAnim += 0.1;
 
-        let enemies = [];
-        let spawnRate = 60; // Frames entre chaque apparition
-        let frameCount = 0;
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Configuration initiale du canvas
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            centerX = canvas.width / 2;
-            centerY = canvas.height / 2;
-            
-            // Ajuster le rayon pour mobile
-            if (canvas.width < 600) {
-                orbitRadius = 80;
-            } else {
-                orbitRadius = 120;
-            }
+        if (dist < CONFIG.playerSize + CONFIG.pizzaSize/2) {
+            // Ramasser
+            worldPizzas.splice(i, 1);
+            addPizzaToStack();
         }
-        window.addEventListener('resize', resize);
-        resize();
+    }
 
-        // --- CLASSE ENNEMI ---
-        class Enemy {
-            constructor() {
-                // Apparaît aléatoirement sur un bord de l'écran
-                const edge = Math.floor(Math.random() * 4); // 0: Haut, 1: Droite, 2: Bas, 3: Gauche
-                
-                if (edge === 0) { // Haut
-                    this.x = Math.random() * canvas.width;
-                    this.y = -20;
-                } else if (edge === 1) { // Droite
-                    this.x = canvas.width + 20;
-                    this.y = Math.random() * canvas.height;
-                } else if (edge === 2) { // Bas
-                    this.x = Math.random() * canvas.width;
-                    this.y = canvas.height + 20;
-                } else { // Gauche
-                    this.x = -20;
-                    this.y = Math.random() * canvas.height;
-                }
+    // 4. Logique du Stack (Suivi fluide)
+    // Le premier élément du stack suit le joueur, le second suit le premier, etc.
+    let targetX = player.x;
+    let targetY = player.y; // Le joueur porte la pile "sur" lui (z-index simulé plus tard)
 
-                this.size = 15;
-                this.color = '#ff0055'; // Rouge Néon
-                
-                // Calcul du vecteur vers le centre
-                const dx = centerX - this.x;
-                const dy = centerY - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                this.speed = 2 + (score * 0.05); // La vitesse augmente légèrement avec le score
-                this.vx = (dx / distance) * this.speed;
-                this.vy = (dy / distance) * this.speed;
-                
-                // Rotation propre à l'obstacle pour le style
-                this.angle = 0;
-                this.rotSpeed = (Math.random() - 0.5) * 0.2;
-            }
+    player.stack.forEach((p, index) => {
+        // Interpolation vers la position cible
+        p.x += (targetX - p.x) * CONFIG.stackLerp;
+        p.y += (targetY - p.y) * CONFIG.stackLerp;
 
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.angle += this.rotSpeed;
-            }
+        // La prochaine pizza doit suivre celle-ci, mais un peu plus haut (simulation pile)
+        // En "vue de dessus", on décale juste un peu en Y pour simuler la hauteur
+        // Mais pour le "trailing effect" (serpent), on suit la position physique.
+        // Ici on fait un effet "Carry" (Porter) donc on empile sur le même X/Y avec un décalage visuel Z.
+        
+        // Pour un effet Arcade fluide : on utilise une légère inertie (lag) sur la position exacte
+        targetX = p.x; 
+        targetY = p.y;
+    });
 
-            draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.angle);
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = this.color;
-                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
-                ctx.restore();
-            }
+    // 5. Zone de Vente (Comptoir)
+    const inSellZone = 
+        player.x > zones.counter.x && 
+        player.x < zones.counter.x + zones.counter.w &&
+        player.y > zones.counter.y && 
+        player.y < zones.counter.y + zones.counter.h;
+
+    if (inSellZone && player.stack.length > 0) {
+        // Augmenter la barre
+        player.sellProgress += CONFIG.sellSpeed;
+        
+        if (player.sellProgress >= 100) {
+            sellPizza();
+            player.sellProgress = 0;
         }
+    } else {
+        // Réduire la barre si on sort ou si vide
+        player.sellProgress = Math.max(0, player.sellProgress - 5);
+    }
+    
+    updateParticles();
+}
 
-        // --- FONCTIONS DE JEU ---
+function addPizzaToStack() {
+    // La nouvelle pizza commence à la position du joueur pour transition fluide
+    player.stack.push({
+        x: player.x,
+        y: player.y
+    });
+    // Petit effet de rebond visuel (scale) à faire dans le draw si on veut
+}
 
-        function startGame() {
-            isPlaying = true;
-            score = 0;
-            enemies = [];
-            player.angle = 0;
-            frameCount = 0;
-            spawnRate = 60;
-            
-            scoreEl.textContent = "0";
-            scoreEl.style.display = 'block';
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
+function sellPizza() {
+    const p = player.stack.pop();
+    gameState.money += 15;
+    scoreEl.innerText = gameState.money;
+    
+    // Créer des particules d'argent
+    createParticles(player.x, player.y - 60, '#2ecc71', 5);
+}
 
-            // Timer de score (1 point par seconde)
-            if (scoreInterval) clearInterval(scoreInterval);
-            scoreInterval = setInterval(() => {
-                if(isPlaying) {
-                    score++;
-                    scoreEl.textContent = score;
-                    // Augmente la difficulté
-                    if(spawnRate > 20) spawnRate -= 1; 
-                }
-            }, 1000);
+function createParticles(x, y, color, count) {
+    for(let i=0; i<count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5 - 2,
+            life: 1.0,
+            color: color
+        });
+    }
+}
 
-            gameLoop();
-        }
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+        if(p.life <= 0) particles.splice(i, 1);
+    }
+}
 
-        function gameOver() {
-            isPlaying = false;
-            cancelAnimationFrame(animationId);
-            clearInterval(scoreInterval);
-            
-            finalScoreEl.textContent = score;
-            scoreEl.style.display = 'none';
-            gameOverScreen.classList.remove('hidden');
-            
-            // Effet d'explosion visuelle (simple flash rouge)
-            ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+// --- RENDU GRAPHIQUE ---
+function draw() {
+    // Fond
+    ctx.fillStyle = CONFIG.colors.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        function update() {
-            // Mouvement du joueur
-            player.angle += player.speed * player.direction;
-            player.x = centerX + Math.cos(player.angle) * orbitRadius;
-            player.y = centerY + Math.sin(player.angle) * orbitRadius;
+    // Dessiner Grille (pour effet de vitesse/profondeur)
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = 2;
+    const gridSize = 100;
+    const offsetX = -player.x % gridSize; // Effet parallaxe simple
+    const offsetY = -player.y % gridSize;
+    
+    // Dessiner les zones
+    drawZone(zones.kitchen, CONFIG.colors.kitchen, CONFIG.colors.kitchenBorder);
+    drawZone(zones.counter, CONFIG.colors.counter, CONFIG.colors.counterBorder);
 
-            // Gestion des ennemis
-            frameCount++;
-            if (frameCount % spawnRate === 0) {
-                enemies.push(new Enemy());
-            }
+    // Dessiner les Pizzas au sol (Cuisine)
+    worldPizzas.forEach(p => {
+        const scale = p.spawnAnim; // Effet pop-up
+        drawPizza3D(p.x, p.y, scale);
+    });
 
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                let e = enemies[i];
-                e.update();
+    // Dessiner le Joueur
+    drawPlayer();
 
-                // Collision avec le joueur
-                const distPlayer = Math.hypot(player.x - e.x, player.y - e.y);
-                if (distPlayer < player.radius + e.size / 2) {
-                    gameOver();
-                }
+    // Dessiner le Stack (Pizzas portées)
+    // On dessine du bas (premier du tableau) vers le haut
+    // Pour simuler la hauteur, chaque pizza est dessinée plus haut (Y négatif) que la précédente
+    player.stack.forEach((p, i) => {
+        // Offset de hauteur basé sur l'index
+        const heightOffset = (i + 1) * CONFIG.stackOffset; 
+        // L'objet suit physiquement avec Lerp, mais on le dessine décalé vers le haut
+        drawPizza3D(p.x, p.y - heightOffset, 1, true);
+    });
 
-                // Supprimer si atteint le centre (optionnel, ici on considère que le centre est "safe" mais le joueur orbite autour)
-                // Dans ce design, si l'ennemi traverse tout l'écran, on le supprime
-                const distCenter = Math.hypot(centerX - e.x, centerY - e.y);
-                if (distCenter < 5) {
-                    enemies.splice(i, 1);
-                }
-            }
-        }
+    // Dessiner Barre de Vente
+    if (player.sellProgress > 0) {
+        drawProgressBar();
+    }
 
-        function draw() {
-            // Effacer l'écran avec un léger sillage (trail effect) pour fluidité
-            // ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)'; // Fond semi-transparent pour effet de traînée
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Particules
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    });
 
-            // Dessiner l'orbite (cercle fin)
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+    // Joystick Visuel
+    if (input.active) {
+        ctx.beginPath();
+        ctx.arc(input.originX, input.originY, 50, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
 
-            // Dessiner le noyau central (décoratif)
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#fff';
-            ctx.fill();
+        ctx.beginPath();
+        // Le stick ne peut pas sortir du cercle
+        const stickX = input.originX + Math.cos(input.angle) * input.magnitude;
+        const stickY = input.originY + Math.sin(input.angle) * input.magnitude;
+        
+        ctx.arc(stickX, stickY, 20, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fill();
+    }
+}
 
-            // Dessiner le Joueur
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = player.color;
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = player.color;
-            ctx.fill();
+function drawZone(zone, color, borderColor) {
+    ctx.fillStyle = color;
+    ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+    
+    // Bordure "3D" au sol
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = borderColor;
+    ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
 
-            // Dessiner les Ennemis
-            enemies.forEach(e => e.draw());
-        }
+    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(zone.label, zone.x + zone.w/2, zone.y + zone.h/2);
+}
 
-        function gameLoop() {
-            if (!isPlaying) return;
-            update();
-            draw();
-            animationId = requestAnimationFrame(gameLoop);
-        }
+function drawPlayer() {
+    // Ombre
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(player.x, player.y + 10, CONFIG.playerSize, CONFIG.playerSize * 0.6, 0, 0, Math.PI*2);
+    ctx.fill();
 
-        // --- ENTRÉES UTILISATEUR ---
+    // Corps (Cercle 3D via dégradé/couches)
+    // Partie basse (plus sombre)
+    ctx.fillStyle = CONFIG.colors.playerShadow;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y + 5, CONFIG.playerSize, 0, Math.PI*2);
+    ctx.fill();
 
-        function handleInput(e) {
-            // Si on clique sur un bouton, on ne fait rien ici
-            if (e.target.tagName === 'BUTTON') return;
-            
-            if (isPlaying) {
-                player.direction *= -1; // Inverser la rotation
-            }
-        }
+    // Partie haute
+    ctx.fillStyle = CONFIG.colors.player;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, CONFIG.playerSize, 0, Math.PI*2);
+    ctx.fill();
 
-        // Support souris et tactile
-        window.addEventListener('mousedown', handleInput);
-        window.addEventListener('touchstart', (e) => {
-            // e.preventDefault(); // Empêcher le comportement par défaut (scroll) si nécessaire
-            handleInput(e);
-        }, {passive: false});
+    // Petit reflet
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(player.x - 8, player.y - 8, 6, 0, Math.PI*2);
+    ctx.fill();
+}
 
-        startBtn.addEventListener('click', startGame);
-        restartBtn.addEventListener('click', startGame);
+function drawPizza3D(x, y, scale = 1, isStacked = false) {
+    const s = CONFIG.pizzaSize * scale;
+    const h = 6 * scale; // Épaisseur de la boite
+    
+    // Centrer
+    const dx = x - s/2;
+    const dy = y - s/2;
 
-    </script>
+    // Ombre si au sol
+    if (!isStacked) {
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(dx + 4, dy + 4 + h, s, s);
+    }
+
+    // Côté (Volume)
+    ctx.fillStyle = CONFIG.colors.pizzaSide;
+    ctx.fillRect(dx, dy + s, s, h);
+
+    // Dessus
+    ctx.fillStyle = CONFIG.colors.pizza;
+    ctx.fillRect(dx, dy, s, s);
+    
+    // Détail (Fromage)
+    ctx.fillStyle = CONFIG.colors.pizzaCheese;
+    ctx.fillRect(dx + s*0.2, dy + s*0.2, s*0.6, s*0.6);
+}
+
+function drawProgressBar() {
+    const w = 60;
+    const h = 10;
+    const x = player.x - w/2;
+    // La barre s'affiche au dessus du stack
+    const stackHeight = player.stack.length * CONFIG.stackOffset;
+    const y = player.y - 40 - stackHeight;
+
+    // Fond barre
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.roundRect(x, y, w, h, 5); // roundRect est standard récent
+    ctx.fill();
+
+    // Remplissage
+    ctx.fillStyle = '#2ecc71';
+    const fillW = (player.sellProgress / 100) * w;
+    // Protection roundRect
+    if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, fillW, h, 5);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, fillW, h);
+    }
+}
+
+// --- BOUCLE PRINCIPALE ---
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// Lancement
+init();
+
+</script>
 </body>
-</html>
+    </html>
+    
