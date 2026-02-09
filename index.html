@@ -2,218 +2,144 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>XEROX MK-XVII</title>
-
+<title>XEROX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
-:root {
-  --bg:#030305;
-  --cyan:#00f3ff;
-  --violet:#bc00ff;
-  --red:#ff2a2a;
-}
-
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--cyan);
-  font-family:'Share Tech Mono', monospace;
-  overflow:hidden;
-}
-
-canvas {
-  display:block;
-  margin:auto;
-  background:#000;
-}
-
-#ui {
-  position:absolute;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  width:90%;
-  max-width:500px;
-  display:flex;
-  justify-content:space-between;
-  pointer-events:none;
-}
+body{margin:0;background:#000;color:#aaa;font-family:monospace;overflow:hidden}
+canvas{display:block}
+#ui{position:fixed;top:10px;left:10px;font-size:12px}
 </style>
 </head>
-
 <body>
+
+<div id="ui">XEROX</div>
 <canvas id="c"></canvas>
-<div id="ui">
-  <div id="score">SCORE 0000</div>
-  <div id="energy">ENERGY █████</div>
-</div>
 
 <script>
-/* ================= CONFIG ================= */
+// ===== CONFIG =====
 const TILE = 32;
-const VIEW = 10;
+const CHUNK = 16;
+const VIEW = 5;
 
-const BIOMES = {
-  PLAINS: { color:"#1a1a1a" },
-  VOID:   { color:"#050505" },
-  VIOLET: { color:"#2b0033" }
-};
-
-/* ================= UTILS ================= */
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const seed = (x,y)=>Math.sin(x*12.9898+y*78.233)*43758.5453%1;
-
-/* ================= WORLD ================= */
-const world = new Map();
-function getTile(tx,ty){
-  const k=tx+","+ty;
-  if(world.has(k)) return world.get(k);
-  let n=seed(tx*0.2,ty*0.2);
-  let b="PLAINS";
-  if(n>0.5) b="VIOLET";
-  if(n<-0.4) b="VOID";
-  world.set(k,b);
-  return b;
-}
-
-/* ================= GAME ================= */
-const c=document.getElementById("c");
-const ctx=c.getContext("2d");
+// ===== CANVAS =====
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+resize();
+window.onresize = resize;
 
 function resize(){
-  c.width=Math.min(innerWidth,500);
-  c.height=innerHeight;
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
 }
-window.addEventListener("resize",resize);
-resize();
 
-const player={
-  x:0,y:0,
-  vx:0,vy:0,
-  energy:100,
-  intangible:false
+// ===== WORLD MEMORY =====
+const Memory = JSON.parse(localStorage.getItem("XEROX")) || {
+  zones:{},
+  choices:{},
+  quests:{}
+};
+function save(){localStorage.setItem("XEROX",JSON.stringify(Memory));}
+
+// ===== PLAYER =====
+const P={
+  x:0,y:0,s:4,energy:100,intangible:false
 };
 
-let score=0;
+// ===== INPUT =====
+const keys={};
+onkeydown=e=>keys[e.key]=true;
+onkeyup=e=>keys[e.key]=false;
 
-/* ================= INPUT ================= */
-const input={dir:0, intangible:false};
-window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowLeft"||e.key==="a") input.dir=-1;
-  if(e.key==="ArrowRight"||e.key==="d") input.dir=1;
-  if(e.key==="Shift") input.intangible=true;
-});
-window.addEventListener("keyup",e=>{
-  if(["ArrowLeft","ArrowRight","a","d"].includes(e.key)) input.dir=0;
-  if(e.key==="Shift") input.intangible=false;
-});
+// mobile
+let touchX=null;
+canvas.ontouchstart=e=>touchX=e.touches[0].clientX;
+canvas.ontouchend=()=>touchX=null;
 
-/* ================= ENEMIES ================= */
-const enemies=[];
-function spawnEnemy(){
-  enemies.push({
-    x:player.x+Math.random()*6-3,
-    y:player.y-8,
-    state:"idle"
-  });
+// ===== GENERATORS =====
+function rand(x,y){
+  return Math.abs(Math.sin(x*12.9+y*78.2))*10000%1;
 }
 
-/* ================= LOOP ================= */
-let last=performance.now();
-function loop(t){
-  const dt=Math.min((t-last)/1000,0.1);
-  last=t;
-  update(dt);
+// BIOME / CIVILISATION
+function zoneData(cx,cy){
+  const id=cx+","+cy;
+  if(Memory.zones[id]) return Memory.zones[id];
+
+  const r=rand(cx,cy);
+  const zone={
+    biome:r<0.3?"plaine":r<0.6?"ruine":"infecté",
+    city:r>0.7,
+    infected:r>0.5,
+    danger:Math.floor(r*10)
+  };
+  Memory.zones[id]=zone;
+  save();
+  return zone;
+}
+
+// QUEST GENERATOR
+function generateQuest(zone){
+  if(zone.biome==="infecté")
+    return {type:"purge",reward:"mutation"};
+  if(zone.city)
+    return {type:"choix_politique",reward:"relation"};
+  return {type:"exploration",reward:"souvenir"};
+}
+
+// ===== UPDATE =====
+function update(){
+  // movement
+  if(keys.ArrowRight||touchX>innerWidth/2)P.x+=P.s;
+  if(keys.ArrowLeft||touchX<innerWidth/2)P.x-=P.s;
+  if(keys.Shift&&P.energy>0){
+    P.intangible=true;
+    P.energy-=0.5;
+  }else{
+    P.intangible=false;
+    P.energy=Math.min(100,P.energy+0.2);
+  }
+}
+
+// ===== DRAW =====
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx=Math.floor(P.x/(TILE*CHUNK));
+  const cy=Math.floor(P.y/(TILE*CHUNK));
+
+  for(let dx=-VIEW;dx<=VIEW;dx++)
+  for(let dy=-VIEW;dy<=VIEW;dy++){
+    const z=zoneData(cx+dx,cy+dy);
+    const x=(dx*CHUNK*TILE)-(P.x%(CHUNK*TILE))+canvas.width/2;
+    const y=(dy*CHUNK*TILE)-(P.y%(CHUNK*TILE))+canvas.height/2;
+
+    ctx.fillStyle=
+      z.biome==="plaine"?"#113311":
+      z.biome==="ruine"?"#333":
+      "#220022";
+    ctx.fillRect(x,y,CHUNK*TILE,CHUNK*TILE);
+
+    if(z.city){
+      ctx.fillStyle="#ffaa00";
+      ctx.fillRect(x+50,y+50,40,40);
+    }
+  }
+
+  // PLAYER
+  ctx.fillStyle=P.intangible?"rgba(180,0,255,0.6)":"#fff";
+  ctx.fillRect(canvas.width/2-10,canvas.height/2-10,20,20);
+
+  // UI
+  ctx.fillStyle="#0ff";
+  ctx.fillText("Énergie: "+Math.floor(P.energy),10,40);
+}
+
+function loop(){
+  update();
   draw();
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
-
-/* ================= UPDATE ================= */
-function update(dt){
-  // Movement
-  player.vx+=input.dir*20*dt;
-  player.vx*=0.9;
-  player.x+=player.vx;
-
-  // Intangible mode
-  if(input.intangible && player.energy>0){
-    player.intangible=true;
-    player.energy-=30*dt;
-  } else {
-    player.intangible=false;
-    player.energy+=15*dt;
-  }
-  player.energy=clamp(player.energy,0,100);
-
-  if(!player.intangible) score+=dt*10;
-
-  // Enemies AI
-  enemies.forEach(e=>{
-    const dx=player.x-e.x;
-    const dy=player.y-e.y;
-    const dist=Math.hypot(dx,dy);
-
-    if(dist<6 && !player.intangible) e.state="hunt";
-    else if(player.intangible) e.state="confused";
-    else e.state="idle";
-
-    if(e.state==="hunt"){
-      e.x+=Math.sign(dx)*dt*2;
-      e.y+=Math.sign(dy)*dt*2;
-    }
-    if(e.state==="confused"){
-      e.x+=Math.sin(t*0.001)*dt;
-    }
-
-    if(dist<0.5 && !player.intangible){
-      score=0;
-      player.energy=100;
-    }
-  });
-
-  if(Math.random()<0.01) spawnEnemy();
-
-  document.getElementById("score").textContent=
-    "SCORE "+String(Math.floor(score)).padStart(4,"0");
-  document.getElementById("energy").textContent=
-    "ENERGY "+ "█".repeat(Math.floor(player.energy/20));
-}
-
-/* ================= DRAW ================= */
-function draw(){
-  ctx.fillStyle="rgba(0,0,0,0.4)";
-  ctx.fillRect(0,0,c.width,c.height);
-
-  const cx=Math.floor(c.width/2);
-  const cy=Math.floor(c.height/2);
-
-  for(let y=-VIEW;y<=VIEW;y++){
-    for(let x=-VIEW;x<=VIEW;x++){
-      const tx=Math.floor(player.x+x);
-      const ty=Math.floor(player.y+y);
-      const biome=getTile(tx,ty);
-      ctx.fillStyle=BIOMES[biome].color;
-      ctx.fillRect(cx+x*TILE,cy+y*TILE,TILE,TILE);
-    }
-  }
-
-  // Enemies
-  enemies.forEach(e=>{
-    ctx.fillStyle=player.intangible? "rgba(255,42,42,0.3)" : "#ff2a2a";
-    ctx.fillRect(cx+(e.x-player.x)*TILE,cy+(e.y-player.y)*TILE,20,20);
-  });
-
-  // Player
-  ctx.shadowBlur=player.intangible?25:10;
-  ctx.shadowColor=player.intangible? "violet":"cyan";
-  ctx.fillStyle=player.intangible? "#bc00ff":"#00f3ff";
-  ctx.fillRect(cx-10,cy-10,20,20);
-  ctx.shadowBlur=0;
-}
+loop();
 </script>
+
 </body>
-  </html>
-  
+</html>
