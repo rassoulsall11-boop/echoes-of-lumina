@@ -4,3 +4,6 @@ function initUI() {
     GameState.started = true;
   });
 }
+export function initUI() {
+  console.log("UI initialisée");
+}
