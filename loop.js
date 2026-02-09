@@ -1,14 +1,19 @@
-let lastTime = performance.now();
+import { renderer, scene, camera } from './moteur.js';
+import { updateJoueur } from './joueur.js';
+import { updateMonde } from './monde.js';
+import { ÉTAT } from './état.js';
 
-function gameLoop(time) {
-  const dt = (time - lastTime) / 1000;
-  lastTime = time;
+export function loop(input) {
+  function frame(time) {
+    ÉTAT.delta = time - ÉTAT.temps;
+    ÉTAT.temps = time;
 
-  if (GameState.started) {
-    handleInput(dt);
-    updatePlayer();
+    updateJoueur(input);
+    updateMonde(scene.children.find(o => o.isMesh && o.geometry.type === "SphereGeometry"));
+
     renderer.render(scene, camera);
+    requestAnimationFrame(frame);
   }
 
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(frame);
 }
