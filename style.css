@@ -1,7 +1,8 @@
-body {
+html, body {
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: black;
+  background: #000;
   font-family: 'Orbitron', sans-serif;
 }
 
@@ -11,35 +12,20 @@ canvas {
   display: block;
 }
 
-#ui-layer {
+#ui {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
 
-#intro {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle, #0a0e27, #000);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-#intro h1 {
-  font-size: 3rem;
-  margin-bottom: 10px;
-}
-
-#intro button {
-  pointer-events: auto;
-  padding: 14px 40px;
-  font-size: 1.2rem;
-  border-radius: 40px;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(135deg, #00f2ff, #a855f7);
-  color: white;
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 10px 14px;
+  background: rgba(10,10,30,0.85);
+  border: 1px solid cyan;
+  color: cyan;
+  border-radius: 12px;
+  font-size: 14px;
 }
