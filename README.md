@@ -1,13 +1,13 @@
-# XEROX
+# ✦ XEROX ✦
 
-Prototype expérimental d’un monde procédural infini.
-Fonctionne sur :
-- PC
-- Mobile
-- Tablette
+XEROX est un jeu 3D expérimental en navigateur (PC / Mobile),
+basé sur un monde qui se souvient des choix du joueur.
+
+Technos :
+- HTML5
+- CSS3
+- JavaScript
+- Three.js
 
 Objectif :
-Créer un monde vivant, mémoriel, systémique.
-
-XEROX n’est pas un open-world.
-C’est un monde qui observe le joueur.
+Explorer, observer, agir… et accepter les conséquences.
