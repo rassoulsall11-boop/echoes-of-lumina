@@ -1,360 +1,138 @@
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus Arcade Idle Prototype</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #2c3e50; /* Couleur de fond sol */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Empêche le scroll sur mobile */
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>XEROX // MK-XVI</title>
 
-        #gameCanvas {
-            display: block;
-        }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-        #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            width: 100%;
-            pointer-events: none; /* Laisse passer les clics vers le canvas */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
+:root {
+  --bg:#050508;
+  --cyan:#00f3ff;
+  --violet:#bc00ff;
+}
 
-        .score-box {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 30px;
-            border-radius: 50px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            font-size: 24px;
-            font-weight: bold;
-            color: #27ae60;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--cyan);
+  font-family:'Share Tech Mono', monospace;
+  overflow:hidden;
+  touch-action:none;
+}
 
-        .tutorial {
-            margin-top: 10px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 14px;
-            text-align: center;
-        }
-    </style>
+canvas {
+  display:block;
+  margin:auto;
+  background:#000;
+}
+</style>
 </head>
+
 <body>
+<canvas id="c"></canvas>
 
-    <!-- Interface Utilisateur -->
-    <div id="ui-layer">
-        <div class="score-box">
-            <span>$</span><span id="moneyDisplay">0</span>
-        </div>
-        <div class="tutorial">Glissez pour bouger • Cuisine (Vert) • Vente (Rouge)</div>
-    </div>
+<script>
+/* ================= CORE CONFIG ================= */
+const TILE = 64;
+const VIEW = 6; // chunks autour du joueur
+const CHUNK = 8; // tiles par chunk
 
-    <!-- Zone de jeu -->
-    <canvas id="gameCanvas"></canvas>
+/* ================= CANVAS ================= */
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
 
-    <script>
-        // --- CONFIGURATION ---
-        const CONFIG = {
-            playerSpeed: 5,
-            playerSize: 25,
-            pizzaSize: 18,
-            stackLerp: 0.15, // Vitesse de suivi du stack (plus bas = plus de retard/fluide)
-            stackOffset: 12, // Décalage visuel en hauteur pour effet 3D
-            spawnRate: 60,   // Frames entre chaque apparition de pizza
-            sellRate: 10,    // Frames entre chaque vente
-            colors: {
-                player: '#3498db',
-                pizza: '#e67e22',
-                kitchen: 'rgba(46, 204, 113, 0.3)',
-                kitchenBorder: '#27ae60',
-                counter: 'rgba(231, 76, 60, 0.3)',
-                counterBorder: '#c0392b',
-                joystickBase: 'rgba(255, 255, 255, 0.2)',
-                joystickStick: 'rgba(255, 255, 255, 0.5)'
-            }
-        };
+function resize(){
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
 
-        // --- MOTEUR DE JEU ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const moneyDisplay = document.getElementById('moneyDisplay');
+/* ================= INPUT ================= */
+const input = {x:0,y:0};
 
-        let width, height;
-        let money = 0;
-        let frameCount = 0;
+window.addEventListener("keydown", e=>{
+  if(e.key==="ArrowLeft"||e.key==="a") input.x=-1;
+  if(e.key==="ArrowRight"||e.key==="d") input.x=1;
+  if(e.key==="ArrowUp"||e.key==="w") input.y=-1;
+  if(e.key==="ArrowDown"||e.key==="s") input.y=1;
+});
+window.addEventListener("keyup", ()=>input.x=input.y=0);
 
-        // Entités
-        const player = { x: 0, y: 0, vx: 0, vy: 0, stack: [] };
-        const pizzasOnGround = [];
-        
-        // Zones
-        let kitchenZone = { x: 0, y: 0, w: 200, h: 200 };
-        let counterZone = { x: 0, y: 0, w: 200, h: 100 };
+c.addEventListener("touchmove", e=>{
+  const t=e.touches[0];
+  input.x = (t.clientX/c.width-0.5)*2;
+  input.y = (t.clientY/c.height-0.5)*2;
+});
 
-        // Joystick
-        const joystick = { active: false, originX: 0, originY: 0, currentX: 0, currentY: 0, radius: 50 };
+/* ================= PLAYER ================= */
+const player = {
+  x:0,y:0,
+  speed:4
+};
 
-        // --- INITIALISATION ---
-        function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            
-            // Repositionnement initial
-            player.x = width / 2;
-            player.y = height / 2;
+/* ================= WORLD MEMORY ================= */
+const world = new Map();
 
-            // Placement des zones
-            kitchenZone.x = 50;
-            kitchenZone.y = height / 2 - 100;
+function seed(x,y){
+  return Math.sin(x*127.1+y*311.7)*43758.5453%1;
+}
 
-            counterZone.x = width - 250;
-            counterZone.y = height / 2 - 50;
-        }
-        window.addEventListener('resize', resize);
-        resize();
+function getTile(x,y){
+  const k=x+","+y;
+  if(world.has(k)) return world.get(k);
+  const v = seed(x,y);
+  const tile = v>0.6?"water":v>0.3?"ground":"void";
+  world.set(k,tile);
+  return tile;
+}
 
-        // --- INPUTS (Souris & Tactile) ---
-        function startInput(x, y) {
-            joystick.active = true;
-            joystick.originX = x;
-            joystick.originY = y;
-            joystick.currentX = x;
-            joystick.currentY = y;
-        }
+/* ================= DRAW ================= */
+function drawTile(x,y,t){
+  if(t==="void") return;
+  ctx.fillStyle = t==="ground"? "#1a1a1a" : "#002233";
+  ctx.fillRect(x,y,TILE,TILE);
+}
 
-        function moveInput(x, y) {
-            if (!joystick.active) return;
-            joystick.currentX = x;
-            joystick.currentY = y;
-        }
+/* ================= LOOP ================= */
+function loop(){
+  // movement
+  player.x += input.x * player.speed;
+  player.y += input.y * player.speed;
 
-        function endInput() {
-            joystick.active = false;
-            player.vx = 0;
-            player.vy = 0;
-        }
+  ctx.fillStyle="rgba(0,0,0,0.3)";
+  ctx.fillRect(0,0,c.width,c.height);
 
-        // Événements
-        canvas.addEventListener('mousedown', e => startInput(e.clientX, e.clientY));
-        canvas.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
-        canvas.addEventListener('mouseup', endInput);
-        
-        canvas.addEventListener('touchstart', e => {
-            e.preventDefault();
-            startInput(e.touches[0].clientX, e.touches[0].clientY);
-        }, {passive: false});
-        canvas.addEventListener('touchmove', e => {
-            e.preventDefault();
-            moveInput(e.touches[0].clientX, e.touches[0].clientY);
-        }, {passive: false});
-        canvas.addEventListener('touchend', endInput);
+  const ox = Math.floor(player.x/TILE);
+  const oy = Math.floor(player.y/TILE);
 
-        // --- LOGIQUE ---
-        function update() {
-            frameCount++;
+  for(let y=-VIEW;y<VIEW;y++){
+    for(let x=-VIEW;x<VIEW;x++){
+      const tx=ox+x;
+      const ty=oy+y;
+      const t = getTile(tx,ty);
+      drawTile(
+        c.width/2 + (tx*TILE-player.x),
+        c.height/2 + (ty*TILE-player.y),
+        t
+      );
+    }
+  }
 
-            // 1. Calcul Joystick & Mouvement Joueur
-            if (joystick.active) {
-                const dx = joystick.currentX - joystick.originX;
-                const dy = joystick.currentY - joystick.originY;
-                const distance = Math.hypot(dx, dy);
-                const angle = Math.atan2(dy, dx);
-                
-                // Normalisation de la vitesse (pour ne pas aller trop vite)
-                const speed = Math.min(distance / 20, 1) * CONFIG.playerSpeed;
-                
-                player.vx = Math.cos(angle) * speed;
-                player.vy = Math.sin(angle) * speed;
+  // player
+  ctx.fillStyle="white";
+  ctx.shadowBlur=20;
+  ctx.shadowColor="cyan";
+  ctx.fillRect(c.width/2-10,c.height/2-10,20,20);
+  ctx.shadowBlur=0;
 
-                player.x += player.vx;
-                player.y += player.vy;
+  requestAnimationFrame(loop);
+}
 
-                // Limites écran
-                player.x = Math.max(CONFIG.playerSize, Math.min(width - CONFIG.playerSize, player.x));
-                player.y = Math.max(CONFIG.playerSize, Math.min(height - CONFIG.playerSize, player.y));
-            }
-
-            // 2. Gestion du Stack (Algorithme de suite fluide)
-            // Chaque pizza suit la position cible (soit le joueur, soit la pizza précédente)
-            let targetX = player.x;
-            let targetY = player.y;
-
-            for (let i = 0; i < player.stack.length; i++) {
-                const p = player.stack[i];
-                
-                // Interpolation linéaire (Lerp) pour la fluidité
-                p.x += (targetX - p.x) * CONFIG.stackLerp;
-                p.y += (targetY - p.y) * CONFIG.stackLerp;
-
-                // On définit la cible pour la prochaine pizza (un peu en arrière pour l'effet de queue)
-                targetX = p.x;
-                targetY = p.y;
-            }
-
-            // 3. Zone Cuisine (Génération)
-            if (frameCount % CONFIG.spawnRate === 0 && pizzasOnGround.length < 20) {
-                pizzasOnGround.push({
-                    x: kitchenZone.x + 20 + Math.random() * (kitchenZone.w - 40),
-                    y: kitchenZone.y + 20 + Math.random() * (kitchenZone.h - 40)
-                });
-            }
-
-            // 4. Collision : Ramasser Pizza
-            for (let i = pizzasOnGround.length - 1; i >= 0; i--) {
-                const p = pizzasOnGround[i];
-                const dist = Math.hypot(player.x - p.x, player.y - p.y);
-                
-                if (dist < CONFIG.playerSize + CONFIG.pizzaSize) {
-                    // Transfert du sol vers le stack
-                    // On initialise la position du stack à la position du joueur pour éviter la téléportation visuelle brutale
-                    player.stack.push({ x: player.x, y: player.y });
-                    pizzasOnGround.splice(i, 1);
-                }
-            }
-
-            // 5. Zone Comptoir (Vente)
-            if (isInZone(player, counterZone)) {
-                if (player.stack.length > 0 && frameCount % CONFIG.sellRate === 0) {
-                    const soldPizza = player.stack.pop(); // Retire la dernière pizza (LIFO)
-                    money += 10;
-                    moneyDisplay.textContent = money;
-                    // Effet visuel optionnel : on pourrait faire voler la pizza vers le comptoir ici
-                }
-            }
-        }
-
-        function isInZone(entity, zone) {
-            return entity.x > zone.x && entity.x < zone.x + zone.w &&
-                   entity.y > zone.y && entity.y < zone.y + zone.h;
-        }
-
-        // --- RENDU ---
-        function draw() {
-            // Effacer l'écran
-            ctx.clearRect(0, 0, width, height);
-
-            // 1. Dessiner les Zones
-            // Cuisine
-            drawZone(kitchenZone, CONFIG.colors.kitchen, CONFIG.colors.kitchenBorder, "CUISINE");
-            // Comptoir
-            drawZone(counterZone, CONFIG.colors.counter, CONFIG.colors.counterBorder, "VENTE");
-
-            // 2. Dessiner les Pizzas au sol
-            ctx.fillStyle = CONFIG.colors.pizza;
-            for (let p of pizzasOnGround) {
-                ctx.fillRect(p.x - CONFIG.pizzaSize/2, p.y - CONFIG.pizzaSize/2, CONFIG.pizzaSize, CONFIG.pizzaSize);
-                // Petit effet d'ombre pour la "3D"
-                ctx.fillStyle = "rgba(0,0,0,0.2)";
-                ctx.fillRect(p.x - CONFIG.pizzaSize/2 + 2, p.y - CONFIG.pizzaSize/2 + 2, CONFIG.pizzaSize, CONFIG.pizzaSize);
-                ctx.fillStyle = CONFIG.colors.pizza;
-            }
-
-            // 3. Dessiner le Joueur
-            // Ombre joueur
-            ctx.beginPath();
-            ctx.arc(player.x + 3, player.y + 3, CONFIG.playerSize, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fill();
-
-            // Corps joueur
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, CONFIG.playerSize, 0, Math.PI * 2);
-            ctx.fillStyle = CONFIG.colors.player;
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // 4. Dessiner le Stack (Pizzas sur le joueur)
-            // On inverse la boucle pour dessiner du bas vers le haut (z-index simulé)
-            for (let i = player.stack.length - 1; i >= 0; i--) {
-                const p = player.stack[i];
-                // Astuce visuelle : On dessine légèrement plus haut (Y négatif) par rapport à l'index
-                // pour simuler une pile verticale, tout en gardant le mouvement fluide (serpent)
-                const visualYOffset = i * 2; 
-                
-                // Ombre de la pizza dans le stack
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(p.x - CONFIG.pizzaSize/2 + 2, p.y - CONFIG.pizzaSize/2 + 2 - visualYOffset, CONFIG.pizzaSize, CONFIG.pizzaSize);
-                
-                // Pizza
-                ctx.fillStyle = CONFIG.colors.pizza;
-                ctx.fillRect(p.x - CONFIG.pizzaSize/2, p.y - CONFIG.pizzaSize/2 - visualYOffset, CONFIG.pizzaSize, CONFIG.pizzaSize);
-                
-                // Bordure pizza
-                ctx.strokeStyle = '#d35400';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(p.x - CONFIG.pizzaSize/2, p.y - CONFIG.pizzaSize/2 - visualYOffset, CONFIG.pizzaSize, CONFIG.pizzaSize);
-            }
-
-            // 5. Dessiner le Joystick Virtuel
-            if (joystick.active) {
-                // Base
-                ctx.beginPath();
-                ctx.arc(joystick.originX, joystick.originY, joystick.radius, 0, Math.PI * 2);
-                ctx.fillStyle = CONFIG.colors.joystickBase;
-                ctx.fill();
-                
-                // Stick
-                ctx.beginPath();
-                let stickX = joystick.originX + (player.vx / CONFIG.playerSpeed) * joystick.radius;
-                let stickY = joystick.originY + (player.vy / CONFIG.playerSpeed) * joystick.radius;
-                
-                // Clamp stick visual inside radius (calcul visuel propre)
-                const dx = joystick.currentX - joystick.originX;
-                const dy = joystick.currentY - joystick.originY;
-                const dist = Math.min(Math.hypot(dx, dy), joystick.radius);
-                const angle = Math.atan2(dy, dx);
-                stickX = joystick.originX + Math.cos(angle) * dist;
-                stickY = joystick.originY + Math.sin(angle) * dist;
-
-                ctx.arc(stickX, stickY, 20, 0, Math.PI * 2);
-                ctx.fillStyle = CONFIG.colors.joystickStick;
-                ctx.fill();
-            }
-
-            requestAnimationFrame(loop);
-        }
-
-        function drawZone(zone, color, borderColor, label) {
-            ctx.fillStyle = color;
-            ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
-            
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = borderColor;
-            ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
-
-            // Texte de zone
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 16px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(label, zone.x + zone.w / 2, zone.y + zone.h / 2);
-        }
-
-        function loop() {
-            update();
-            draw();
-        }
-
-        // Lancer la boucle
-        requestAnimationFrame(loop);
-
-    </script>
+loop();
+</script>
 </body>
 </html>
- 
