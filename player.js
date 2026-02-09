@@ -1,20 +1,21 @@
-// ===============================
-// XEROX – JOUEUR
-// ===============================
-
 import { ÉTAT } from './état.js';
 import { scene, camera } from './moteur.js';
 
 export let joueurMesh;
 
-// ===============================
-// INITIALISATION
-// ===============================
+// état interne du joueur
+let intangible = false;
+let energieIntangible = 100;
+const ENERGIE_MAX = 100;
+
+// ==================== INIT ====================
 export function initJoueur() {
-  const geo = new THREE.SphereGeometry(0.5, 16, 16);
+  const geo = new THREE.SphereGeometry(0.5, 24, 24);
   const mat = new THREE.MeshStandardMaterial({
     color: 0x00ffff,
-    emissive: 0x002233
+    emissive: 0x002222,
+    roughness: 0.4,
+    metalness: 0.1
   });
 
   joueurMesh = new THREE.Mesh(geo, mat);
@@ -30,29 +31,55 @@ export function initJoueur() {
   scene.add(joueurMesh);
 }
 
-// ===============================
-// UPDATE
-// ===============================
-export function updateJoueur(input, delta) {
-  const v = ÉTAT.joueur.vitesse * delta * 60; // normalisation FPS
+// ==================== UPDATE ====================
+export function updateJoueur(input) {
+  if (!joueurMesh) return;
 
-  // --- Déplacement ---
-  if (input.z) joueurMesh.position.z -= v;
-  if (input.s) joueurMesh.position.z += v;
-  if (input.q) joueurMesh.position.x -= v;
-  if (input.d) joueurMesh.position.x += v;
+  // ----- MODE INTANGIBLE -----
+  if (input.shift && energieIntangible > 0) {
+    intangible = true;
+    energieIntangible -= 0.6;
 
-  // --- Sync état ---
+    joueurMesh.material.color.set(0xa855f7);
+    joueurMesh.material.emissive.set(0x3b0764);
+  } else {
+    intangible = false;
+    energieIntangible += 0.4;
+
+    joueurMesh.material.color.set(0x00ffff);
+    joueurMesh.material.emissive.set(0x002222);
+  }
+
+  energieIntangible = Math.max(0, Math.min(ENERGIE_MAX, energieIntangible));
+
+  // ----- DÉPLACEMENT -----
+  const vitesse = intangible
+    ? ÉTAT.joueur.vitesse * 0.55
+    : ÉTAT.joueur.vitesse;
+
+  if (input.z) joueurMesh.position.z -= vitesse;
+  if (input.s) joueurMesh.position.z += vitesse;
+  if (input.q) joueurMesh.position.x -= vitesse;
+  if (input.d) joueurMesh.position.x += vitesse;
+
+  // ----- SYNC ÉTAT GLOBAL -----
   ÉTAT.joueur.position.x = joueurMesh.position.x;
+  ÉTAT.joueur.position.y = joueurMesh.position.y;
   ÉTAT.joueur.position.z = joueurMesh.position.z;
 
-  // --- Caméra lissée ---
-  const camTarget = new THREE.Vector3(
-    joueurMesh.position.x,
-    joueurMesh.position.y + 4,
-    joueurMesh.position.z + 8
-  );
+  // ----- CAMÉRA CINÉMATIQUE -----
+  const camOffset = new THREE.Vector3(0, 5, 8);
+  const targetCamPos = joueurMesh.position.clone().add(camOffset);
 
-  camera.position.lerp(camTarget, 0.08);
+  camera.position.lerp(targetCamPos, 0.08);
   camera.lookAt(joueurMesh.position);
+}
+
+// ==================== INFOS (UI PLUS TARD) ====================
+export function getJoueurData() {
+  return {
+    intangible,
+    energie: energieIntangible,
+    position: { ...ÉTAT.joueur.position }
+  };
 }
