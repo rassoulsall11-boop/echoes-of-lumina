@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>XEROX // MK-XVI</title>
+<title>XEROX MK-XVII</title>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 :root {
-  --bg:#050508;
+  --bg:#030305;
   --cyan:#00f3ff;
   --violet:#bc00ff;
+  --red:#ff2a2a;
 }
 
 body {
@@ -20,7 +21,6 @@ body {
   color:var(--cyan);
   font-family:'Share Tech Mono', monospace;
   overflow:hidden;
-  touch-action:none;
 }
 
 canvas {
@@ -28,111 +28,192 @@ canvas {
   margin:auto;
   background:#000;
 }
+
+#ui {
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:90%;
+  max-width:500px;
+  display:flex;
+  justify-content:space-between;
+  pointer-events:none;
+}
 </style>
 </head>
 
 <body>
 <canvas id="c"></canvas>
+<div id="ui">
+  <div id="score">SCORE 0000</div>
+  <div id="energy">ENERGY █████</div>
+</div>
 
 <script>
-/* ================= CORE CONFIG ================= */
-const TILE = 64;
-const VIEW = 6; // chunks autour du joueur
-const CHUNK = 8; // tiles par chunk
+/* ================= CONFIG ================= */
+const TILE = 32;
+const VIEW = 10;
 
-/* ================= CANVAS ================= */
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
-
-function resize(){
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* ================= INPUT ================= */
-const input = {x:0,y:0};
-
-window.addEventListener("keydown", e=>{
-  if(e.key==="ArrowLeft"||e.key==="a") input.x=-1;
-  if(e.key==="ArrowRight"||e.key==="d") input.x=1;
-  if(e.key==="ArrowUp"||e.key==="w") input.y=-1;
-  if(e.key==="ArrowDown"||e.key==="s") input.y=1;
-});
-window.addEventListener("keyup", ()=>input.x=input.y=0);
-
-c.addEventListener("touchmove", e=>{
-  const t=e.touches[0];
-  input.x = (t.clientX/c.width-0.5)*2;
-  input.y = (t.clientY/c.height-0.5)*2;
-});
-
-/* ================= PLAYER ================= */
-const player = {
-  x:0,y:0,
-  speed:4
+const BIOMES = {
+  PLAINS: { color:"#1a1a1a" },
+  VOID:   { color:"#050505" },
+  VIOLET: { color:"#2b0033" }
 };
 
-/* ================= WORLD MEMORY ================= */
+/* ================= UTILS ================= */
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const seed = (x,y)=>Math.sin(x*12.9898+y*78.233)*43758.5453%1;
+
+/* ================= WORLD ================= */
 const world = new Map();
-
-function seed(x,y){
-  return Math.sin(x*127.1+y*311.7)*43758.5453%1;
-}
-
-function getTile(x,y){
-  const k=x+","+y;
+function getTile(tx,ty){
+  const k=tx+","+ty;
   if(world.has(k)) return world.get(k);
-  const v = seed(x,y);
-  const tile = v>0.6?"water":v>0.3?"ground":"void";
-  world.set(k,tile);
-  return tile;
+  let n=seed(tx*0.2,ty*0.2);
+  let b="PLAINS";
+  if(n>0.5) b="VIOLET";
+  if(n<-0.4) b="VOID";
+  world.set(k,b);
+  return b;
 }
 
-/* ================= DRAW ================= */
-function drawTile(x,y,t){
-  if(t==="void") return;
-  ctx.fillStyle = t==="ground"? "#1a1a1a" : "#002233";
-  ctx.fillRect(x,y,TILE,TILE);
+/* ================= GAME ================= */
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
+
+function resize(){
+  c.width=Math.min(innerWidth,500);
+  c.height=innerHeight;
+}
+window.addEventListener("resize",resize);
+resize();
+
+const player={
+  x:0,y:0,
+  vx:0,vy:0,
+  energy:100,
+  intangible:false
+};
+
+let score=0;
+
+/* ================= INPUT ================= */
+const input={dir:0, intangible:false};
+window.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft"||e.key==="a") input.dir=-1;
+  if(e.key==="ArrowRight"||e.key==="d") input.dir=1;
+  if(e.key==="Shift") input.intangible=true;
+});
+window.addEventListener("keyup",e=>{
+  if(["ArrowLeft","ArrowRight","a","d"].includes(e.key)) input.dir=0;
+  if(e.key==="Shift") input.intangible=false;
+});
+
+/* ================= ENEMIES ================= */
+const enemies=[];
+function spawnEnemy(){
+  enemies.push({
+    x:player.x+Math.random()*6-3,
+    y:player.y-8,
+    state:"idle"
+  });
 }
 
 /* ================= LOOP ================= */
-function loop(){
-  // movement
-  player.x += input.x * player.speed;
-  player.y += input.y * player.speed;
+let last=performance.now();
+function loop(t){
+  const dt=Math.min((t-last)/1000,0.1);
+  last=t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 
-  ctx.fillStyle="rgba(0,0,0,0.3)";
+/* ================= UPDATE ================= */
+function update(dt){
+  // Movement
+  player.vx+=input.dir*20*dt;
+  player.vx*=0.9;
+  player.x+=player.vx;
+
+  // Intangible mode
+  if(input.intangible && player.energy>0){
+    player.intangible=true;
+    player.energy-=30*dt;
+  } else {
+    player.intangible=false;
+    player.energy+=15*dt;
+  }
+  player.energy=clamp(player.energy,0,100);
+
+  if(!player.intangible) score+=dt*10;
+
+  // Enemies AI
+  enemies.forEach(e=>{
+    const dx=player.x-e.x;
+    const dy=player.y-e.y;
+    const dist=Math.hypot(dx,dy);
+
+    if(dist<6 && !player.intangible) e.state="hunt";
+    else if(player.intangible) e.state="confused";
+    else e.state="idle";
+
+    if(e.state==="hunt"){
+      e.x+=Math.sign(dx)*dt*2;
+      e.y+=Math.sign(dy)*dt*2;
+    }
+    if(e.state==="confused"){
+      e.x+=Math.sin(t*0.001)*dt;
+    }
+
+    if(dist<0.5 && !player.intangible){
+      score=0;
+      player.energy=100;
+    }
+  });
+
+  if(Math.random()<0.01) spawnEnemy();
+
+  document.getElementById("score").textContent=
+    "SCORE "+String(Math.floor(score)).padStart(4,"0");
+  document.getElementById("energy").textContent=
+    "ENERGY "+ "█".repeat(Math.floor(player.energy/20));
+}
+
+/* ================= DRAW ================= */
+function draw(){
+  ctx.fillStyle="rgba(0,0,0,0.4)";
   ctx.fillRect(0,0,c.width,c.height);
 
-  const ox = Math.floor(player.x/TILE);
-  const oy = Math.floor(player.y/TILE);
+  const cx=Math.floor(c.width/2);
+  const cy=Math.floor(c.height/2);
 
-  for(let y=-VIEW;y<VIEW;y++){
-    for(let x=-VIEW;x<VIEW;x++){
-      const tx=ox+x;
-      const ty=oy+y;
-      const t = getTile(tx,ty);
-      drawTile(
-        c.width/2 + (tx*TILE-player.x),
-        c.height/2 + (ty*TILE-player.y),
-        t
-      );
+  for(let y=-VIEW;y<=VIEW;y++){
+    for(let x=-VIEW;x<=VIEW;x++){
+      const tx=Math.floor(player.x+x);
+      const ty=Math.floor(player.y+y);
+      const biome=getTile(tx,ty);
+      ctx.fillStyle=BIOMES[biome].color;
+      ctx.fillRect(cx+x*TILE,cy+y*TILE,TILE,TILE);
     }
   }
 
-  // player
-  ctx.fillStyle="white";
-  ctx.shadowBlur=20;
-  ctx.shadowColor="cyan";
-  ctx.fillRect(c.width/2-10,c.height/2-10,20,20);
+  // Enemies
+  enemies.forEach(e=>{
+    ctx.fillStyle=player.intangible? "rgba(255,42,42,0.3)" : "#ff2a2a";
+    ctx.fillRect(cx+(e.x-player.x)*TILE,cy+(e.y-player.y)*TILE,20,20);
+  });
+
+  // Player
+  ctx.shadowBlur=player.intangible?25:10;
+  ctx.shadowColor=player.intangible? "violet":"cyan";
+  ctx.fillStyle=player.intangible? "#bc00ff":"#00f3ff";
+  ctx.fillRect(cx-10,cy-10,20,20);
   ctx.shadowBlur=0;
-
-  requestAnimationFrame(loop);
 }
-
-loop();
 </script>
 </body>
-</html>
+  </html>
+  
