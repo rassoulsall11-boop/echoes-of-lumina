@@ -1,38 +1,24 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>XEROX</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
-  <!-- Font -->
+  <link rel="stylesheet" href="css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
+  <canvas id="game"></canvas>
 
-<canvas id="gameCanvas"></canvas>
-
-<div id="ui-layer">
-  <div id="intro">
-    <h1>✦ XEROX ✦</h1>
-    <p>Le monde qui se souvient de tout</p>
-    <button id="startBtn">ENTRER</button>
+  <div id="ui">
+    <div id="hud">XEROX — MK I</div>
   </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<script src="js/state.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/player.js"></script>
-<script src="js/input.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/loop.js"></script>
-<script src="js/main.js"></script>
-
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
