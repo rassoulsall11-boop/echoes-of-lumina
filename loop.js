@@ -1,39 +1,36 @@
 // ===============================
-// XEROX – GAME LOOP
+// XEROX – BOUCLE DE JEU
 // ===============================
 
 import { renderer, scene, camera } from './moteur.js';
-import { updateJoueur } from './joueur.js';
+import { updateJoueur, joueurMesh } from './joueur.js';
 import { updateMonde } from './monde.js';
+import { updateEnnemis } from './ennemis.js';
 import { ÉTAT } from './état.js';
 
-let lastTime = 0;
-
 export function loop(input) {
-  requestAnimationFrame((time) => frame(time, input));
-}
 
-function frame(time, input) {
-  // ===============================
-  // DELTA TIME (en secondes)
-  // ===============================
-  const deltaMs = time - lastTime;
-  lastTime = time;
+  function frame(time) {
+    // ===============================
+    // TEMPS
+    // ===============================
+    ÉTAT.delta = (time - ÉTAT.temps) || 16;
+    ÉTAT.temps = time;
 
-  // Clamp pour éviter les gros lags
-  ÉTAT.delta = Math.min(deltaMs / 1000, 0.033); // max ~30 FPS
-  ÉTAT.temps += ÉTAT.delta;
+    // ===============================
+    // UPDATE LOGIQUE
+    // ===============================
+    updateJoueur(input);
+    updateMonde(joueurMesh);
+    updateEnnemis(joueurMesh);
 
-  // ===============================
-  // UPDATE LOGIC
-  // ===============================
-  updateJoueur(input, ÉTAT.delta);
-  updateMonde();
+    // ===============================
+    // RENDU
+    // ===============================
+    renderer.render(scene, camera);
 
-  // ===============================
-  // RENDER
-  // ===============================
-  renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
 
-  requestAnimationFrame((t) => frame(t, input));
+  requestAnimationFrame(frame);
 }
