@@ -1,34 +1,55 @@
-import { ÉTAT } from './état.js';
+// ===============================
+// XEROX – MONDE (Zelda-like)
+// ===============================
+
 import { scene } from './moteur.js';
 
-export function updateMonde(joueur) {
-  const size = ÉTAT.monde.tailleChunk;
+export function initWorld() {
+  createGround();
+  createTrees();
+}
 
-  const cx = Math.floor(joueur.position.x / size);
-  const cz = Math.floor(joueur.position.z / size);
+// 🌱 SOL
+function createGround() {
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(400, 400, 32, 32),
+    new THREE.MeshStandardMaterial({
+      color: 0x5fa85b,
+      roughness: 1,
+      metalness: 0
+    })
+  );
 
-  for (let x = cx - 1; x <= cx + 1; x++) {
-    for (let z = cz - 1; z <= cz + 1; z++) {
-      const key = `${x},${z}`;
-      if (!ÉTAT.monde.chunks.has(key)) {
-        créerChunk(x, z);
-      }
-    }
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  scene.add(ground);
+}
+
+// 🌳 ARBRES STYLISÉS
+function createTrees() {
+  for (let i = 0; i < 50; i++) {
+    const x = (Math.random() - 0.5) * 300;
+    const z = (Math.random() - 0.5) * 300;
+    createTree(x, z);
   }
 }
 
-function créerChunk(cx, cz) {
-  const size = ÉTAT.monde.tailleChunk;
+function createTree(x, z) {
+  // Tronc
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.4, 2.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x8b5a2b })
+  );
 
-  const geo = new THREE.PlaneGeometry(size, size);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x224466
-  });
+  // Feuilles
+  const leaves = new THREE.Mesh(
+    new THREE.SphereGeometry(1.6, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0x3fa34d })
+  );
 
-  const sol = new THREE.Mesh(geo, mat);
-  sol.rotation.x = -Math.PI / 2;
-  sol.position.set(cx * size, 0, cz * size);
+  trunk.position.set(x, 1.25, z);
+  leaves.position.set(x, 3.5, z);
 
-  scene.add(sol);
-  ÉTAT.monde.chunks.set(`${cx},${cz}`, sol);
+  scene.add(trunk);
+  scene.add(leaves);
 }
