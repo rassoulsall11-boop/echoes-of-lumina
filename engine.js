@@ -1,58 +1,51 @@
 // ===============================
-// MOTEUR THREE.JS – XEROX
+// XEROX – MOTEUR 3D (Three.js)
 // ===============================
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-// import { ÉTAT } from './état.js'; // À réactiver quand utilisé
-
-export let scene, camera, renderer;
+export let scene, camera, renderer, sun;
 
 export function initMoteur(canvas) {
-  if (!canvas) {
-    console.error('[MOTEUR] Canvas introuvable');
-    return;
-  }
-
-  // --- SCÈNE ---
+  // 🌍 SCÈNE
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x050510);
 
-  // --- CAMÉRA ---
+  // 🌫️ Brume atmosphérique (style Zelda)
+  scene.fog = new THREE.Fog(0xcce0ff, 30, 200);
+
+  // 📷 CAMÉRA
   camera = new THREE.PerspectiveCamera(
-    75,
+    60,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000
+    500
   );
-  camera.position.set(0, 5, 10);
+  camera.position.set(0, 6, 10);
 
-  // --- RENDERER ---
+  // 🎨 RENDERER
   renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    powerPreference: 'high-performance'
+    canvas: canvas,
+    antialias: true
   });
-
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.physicallyCorrectLights = true;
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // --- LUMIÈRES ---
-  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-  sun.position.set(10, 20, 10);
+  // ☀️ LUMIÈRE PRINCIPALE (SOLEIL)
+  sun = new THREE.DirectionalLight(0xfff2cc, 1.2);
+  sun.position.set(50, 100, 50);
   scene.add(sun);
 
-  const ambient = new THREE.AmbientLight(0x404040, 1);
+  // 🌤️ LUMIÈRE AMBIANTE
+  const ambient = new THREE.AmbientLight(0x8899aa, 0.6);
   scene.add(ambient);
 
-  // --- RESIZE ---
+  // 🎨 CIEL
+  scene.background = new THREE.Color(0x87bfff);
+
+  // 🔁 Resize
   window.addEventListener('resize', onResize);
 }
 
 function onResize() {
-  if (!camera || !renderer) return;
-
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
