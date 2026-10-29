@@ -1,14 +1,14 @@
-import { scene } from './moteur.js';
+// ===============================
+// XEROX – BIOME & ATMOSPHÈRE
+// ===============================
+
+import * as THREE from 'three';
+import { scene } from './engine.js';
 
 export function initBiome() {
-  // Brouillard (cinéma)
-  scene.fog = new THREE.Fog(0x0b0e1a, 20, 120);
+  if (!scene) return;
 
-  // Lumière soleil
-  const sun = new THREE.DirectionalLight(0xffe0b2, 1.2);
-  sun.position.set(50, 80, 30);
-  sun.castShadow = true;
-  scene.add(sun);
-
-  scene.add(new THREE.AmbientLight(0x404040, 0.6));
+  // Brouillard mystérieux
+  scene.fog = new THREE.FogExp2(0x161b26, 0.012);
+  scene.background = new THREE.Color(0x161b26);
 }

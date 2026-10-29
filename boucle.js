@@ -1,19 +1,36 @@
-import { renderer, scene, camera } from './moteur.js';
-import { updateJoueur, joueurMesh } from './joueur.js';
+// ===============================
+// XEROX – BOUCLE DE JEU (Game Loop)
+// ===============================
+
+import { renderer, scene, camera } from './engine.js';
+import { updateJoueur, playerMesh } from './player.js';
 import { updateMonde } from './monde.js';
-import { ÉTAT } from './état.js';
+import { updateEnnemis } from './ennemi.js';
+import { updateUI } from './ui.js';
+import { STATE } from './state.js';
 
-export function loop(input) {
+let lastTime = 0;
+
+export function startLoop() {
   function frame(time) {
-    ÉTAT.delta = time - ÉTAT.temps;
-    ÉTAT.temps = time;
+    if (!lastTime) lastTime = time;
+    STATE.delta = (time - lastTime) / 1000; // Delta time en secondes
+    STATE.temps = time;
+    lastTime = time;
 
-    updateJoueur(input);
-    updateMonde(joueurMesh);
+    // Updates
+    updateJoueur();
+    updateEnnemis(playerMesh);
+    updateMonde(playerMesh);
+    updateUI();
 
+    // Render
     renderer.render(scene, camera);
+
     requestAnimationFrame(frame);
   }
 
   requestAnimationFrame(frame);
 }
+
+export const loop = startLoop;
