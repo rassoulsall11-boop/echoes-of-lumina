@@ -1,30 +1,59 @@
 // ===============================
-// XEROX – BOUCLE DE JEU (Game Loop)
+// XEROX – BOUCLE DE JEU INTEGRÉE
 // ===============================
 
 import { renderer, scene, camera } from './engine.js';
 import { updateJoueur, playerMesh } from './player.js';
 import { updateMonde } from './monde.js';
 import { updateEnnemis } from './ennemi.js';
-import { updateUI } from './ui.js';
+import { updateReliques } from './relics.js';
+import { updateParticles } from './particles.js';
+import { updateUI, showEndOverlay } from './ui.js';
 import { STATE } from './state.js';
+import { audio } from './audio.js';
 
 let lastTime = 0;
+let isGameOver = false;
 
 export function startLoop() {
   function frame(time) {
     if (!lastTime) lastTime = time;
-    STATE.delta = (time - lastTime) / 1000; // Delta time en secondes
+    const delta = Math.min((time - lastTime) / 1000, 0.1);
+    STATE.delta = delta;
     STATE.temps = time;
     lastTime = time;
 
-    // Updates
-    updateJoueur();
-    updateEnnemis(playerMesh);
-    updateMonde(playerMesh);
-    updateUI();
+    if (!isGameOver) {
+      // Updates
+      updateJoueur(delta);
+      updateEnnemis(playerMesh);
+      updateReliques(playerMesh);
+      updateMonde(playerMesh);
+      updateParticles(delta);
+      updateUI();
 
-    // Render
+      // Condition Défaite (PV = 0)
+      if (STATE.joueur.pv <= 0) {
+        isGameOver = true;
+        showEndOverlay(
+          "ANOMALIE SYSTÈME",
+          "La matrice du joueur a été corrompue par les entités. Cliquez pour réinitialiser la boucle."
+        );
+      }
+
+      // Condition Victoire (Toutes les 3 reliques activées)
+      if (STATE.monde.relicsActivees >= 3) {
+        isGameOver = true;
+        audio.playVictory();
+        showEndOverlay(
+          "HARMONIE RETROUVÉE",
+          "Tous les Sceaux de la Mémoire ont été scellés. Le monde de Xerox se souviendra de vos actes.",
+          true
+        );
+      }
+    }
+
+    // Render 3D
     renderer.render(scene, camera);
 
     requestAnimationFrame(frame);

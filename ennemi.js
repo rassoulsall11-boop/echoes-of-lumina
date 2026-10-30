@@ -1,67 +1,83 @@
 // ===============================
-// XEROX – ENNEMIS & IA SYSTÉMIQUE
+// XEROX – CLASSES D'ENNEMIS & IA
 // ===============================
 
 import * as THREE from 'three';
 import { scene } from './engine.js';
 import { STATE } from './state.js';
+import { audio } from './audio.js';
+import { emitSparks } from './particles.js';
 
 export const ennemis = [];
 
 export function initEnnemis() {
-  // Générer des ennemis à des endroits stratégiques autour du joueur
-  const positions = [
-    { x: -8, z: -10 },
-    { x: 12, z: -14 },
-    { x: -18, z: 12 },
-    { x: 15, z: 15 },
-    { x: 0, z: -25 },
-    { x: -22, z: -5 }
-  ];
+  ennemis.length = 0;
 
-  positions.forEach(pos => creerEnnemi(pos.x, pos.z));
+  // Scouters (Rapides, faible HP)
+  creerEnnemi(-12, -12, "SCOUTER");
+  creerEnnemi(14, -16, "SCOUTER");
+  creerEnnemi(-20, 10, "SCOUTER");
+
+  // Corruptors (Moyens, agressifs)
+  creerEnnemi(18, 18, "CORRUPTOR");
+  creerEnnemi(-22, -18, "CORRUPTOR");
+
+  // Boss Gardien Xerox
+  creerEnnemi(0, -32, "BOSS");
 }
 
-// ===============================
-// CRÉATION ENNEMI
-// ===============================
-export function creerEnnemi(x, z) {
+export function creerEnnemi(x, z, type = "CORRUPTOR") {
   const group = new THREE.Group();
 
-  // Corps agressif (Icosaèdre géométrique)
-  const geo = new THREE.IcosahedronGeometry(0.6, 0);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xcc2233,
-    roughness: 0.4,
-    metalness: 0.6,
-    flatShading: true
-  });
+  let geo, mat, eyeColor, scale;
+
+  if (type === "SCOUTER") {
+    geo = new THREE.TetrahedronGeometry(0.5, 0);
+    mat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.3, flatShading: true });
+    eyeColor = 0xffff00;
+    scale = 0.8;
+  } else if (type === "BOSS") {
+    geo = new THREE.DodecahedronGeometry(1.6, 0);
+    mat = new THREE.MeshStandardMaterial({ color: 0x9900ff, emissive: 0x330066, roughness: 0.2, flatShading: true });
+    eyeColor = 0xff00ff;
+    scale = 1.8;
+  } else {
+    geo = new THREE.IcosahedronGeometry(0.6, 0);
+    mat = new THREE.MeshStandardMaterial({ color: 0xcc2233, roughness: 0.4, flatShading: true });
+    eyeColor = 0xff0000;
+    scale = 1.0;
+  }
 
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = 0.6;
+  mesh.position.y = scale * 0.6;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   group.add(mesh);
 
-  // Yeux rouge vif
-  const eyeGeo = new THREE.BoxGeometry(0.2, 0.1, 0.2);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  const eye = new THREE.Mesh(eyeGeo, eyeMat);
-  eye.position.set(0, 0.7, -0.4);
+  const eye = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.2), new THREE.MeshBasicMaterial({ color: eyeColor }));
+  eye.position.set(0, scale * 0.7, -scale * 0.5);
   group.add(eye);
 
   group.position.set(x, 0, z);
   scene.add(group);
 
+  const stats = {
+    SCOUTER: { vie: 40, vitesse: 0.07, vision: 11, degats: 10, attackDist: 1.2 },
+    CORRUPTOR: { vie: 90, vitesse: 0.045, vision: 9, degats: 18, attackDist: 1.4 },
+    BOSS: { vie: 250, vitesse: 0.03, vision: 15, degats: 30, attackDist: 2.2 }
+  }[type];
+
   const ennemi = {
+    type,
     group,
     mesh,
     état: "IDLE",
-    vie: 100,
-    vieMax: 100,
-    vitesse: 0.045,
-    vision: 9,
-    attaqueDist: 1.3,
+    vie: stats.vie,
+    vieMax: stats.vie,
+    vitesse: stats.vitesse,
+    vision: stats.vision,
+    attaqueDist: stats.attackDist,
+    degats: stats.degats,
     zone: { x, z },
     timer: 0,
     cooldownAttaque: 0
@@ -70,9 +86,6 @@ export function creerEnnemi(x, z) {
   ennemis.push(ennemi);
 }
 
-// ===============================
-// UPDATE IA & COMBAT
-// ===============================
 export function updateEnnemis(playerMesh) {
   if (!playerMesh) return;
 
@@ -86,45 +99,43 @@ export function updateEnnemis(playerMesh) {
     const dz = playerPos.z - ePos.z;
     const dist = Math.hypot(dx, dz);
 
-    if (e.cooldownAttaque > 0) {
-      e.cooldownAttaque -= 0.016;
-    }
+    if (e.cooldownAttaque > 0) e.cooldownAttaque -= 0.016;
 
-    // Détecter si le joueur l'attaque
-    if (STATE.input.attackTriggered && dist < 2.5) {
+    // Attaque du joueur
+    if (STATE.input.attackTriggered && dist < (e.type === "BOSS" ? 3.2 : 2.5)) {
       e.vie -= 45;
-      e.mesh.material.color.set(0xffffff); // Flash d'impact
+      audio.playHit();
+      emitSparks(ePos, 0xff0055, 15);
+
+      e.mesh.material.color.set(0xffffff);
       setTimeout(() => {
-        if (e.mesh && e.mesh.material) e.mesh.material.color.set(0xcc2233);
+        if (e.mesh && e.mesh.material) {
+          e.mesh.material.color.set(e.type === "BOSS" ? 0x9900ff : e.type === "SCOUTER" ? 0xffaa00 : 0xcc2233);
+        }
       }, 120);
 
-      // Recul léger (Knockback)
       if (dist > 0.01) {
-        ePos.x -= (dx / dist) * 1.2;
-        ePos.z -= (dz / dist) * 1.2;
+        ePos.x -= (dx / dist) * 0.8;
+        ePos.z -= (dz / dist) * 0.8;
       }
 
       if (e.vie <= 0) {
-        // Ennemi vaincu -> mise à jour mémoire Xerox
         scene.remove(e.group);
         ennemis.splice(i, 1);
         STATE.monde.memory.ennemisVaincus += 1;
-        STATE.monde.memory.choixDernier = "Force employée : Ennemi éliminé.";
+        STATE.monde.memory.choixDernier = `Entité ${e.type} neutralisée.`;
+        emitSparks(ePos, 0xffff00, 30);
         continue;
       }
     }
 
-    // Machine à états
+    // IA
     switch (e.état) {
-
       case "IDLE":
         e.timer += 0.016;
-        ePos.x += Math.sin(e.timer * 2) * 0.008;
-        ePos.z += Math.cos(e.timer * 2) * 0.008;
-
-        if (dist < e.vision) {
-          e.état = "CHASE";
-        }
+        ePos.x += Math.sin(e.timer * 2) * 0.005;
+        ePos.z += Math.cos(e.timer * 2) * 0.005;
+        if (dist < e.vision) e.état = "CHASE";
         break;
 
       case "CHASE":
@@ -133,31 +144,21 @@ export function updateEnnemis(playerMesh) {
           ePos.z += (dz / dist) * e.vitesse;
           e.group.rotation.y = Math.atan2(dx, dz);
         }
-
-        if (dist < e.attaqueDist) {
-          e.état = "ATTACK";
-        } else if (dist > e.vision * 1.6) {
-          e.état = "RETURN";
-        }
+        if (dist < e.attaqueDist) e.état = "ATTACK";
+        else if (dist > e.vision * 1.6) e.état = "RETURN";
         break;
 
       case "ATTACK":
-        e.mesh.material.color.set(0xff0000);
-
         if (e.cooldownAttaque <= 0) {
-          // Attaquer le joueur
           if (STATE.joueur.invulnerableTimer <= 0) {
-            STATE.joueur.pv = Math.max(0, STATE.joueur.pv - 15);
+            STATE.joueur.pv = Math.max(0, STATE.joueur.pv - e.degats);
             STATE.joueur.invulnerableTimer = 0.8;
-            STATE.monde.memory.choixDernier = "A subi les dégâts d'une créature.";
+            audio.playPlayerDamage();
+            STATE.monde.memory.choixDernier = `A subi ${e.degats} dégâts par ${e.type}`;
           }
           e.cooldownAttaque = 1.2;
         }
-
-        if (dist > e.attaqueDist + 0.5) {
-          e.mesh.material.color.set(0xcc2233);
-          e.état = "CHASE";
-        }
+        if (dist > e.attaqueDist + 0.5) e.état = "CHASE";
         break;
 
       case "RETURN":
@@ -171,17 +172,11 @@ export function updateEnnemis(playerMesh) {
           e.group.rotation.y = Math.atan2(rdx, rdz);
         } else {
           e.état = "IDLE";
-          // L'ennemi épargné qui retourne sereinement augmente les ennemis épargnés
-          STATE.monde.memory.ennemisEpargnes += 0.001;
         }
-
-        if (dist < e.vision) {
-          e.état = "CHASE";
-        }
+        if (dist < e.vision) e.état = "CHASE";
         break;
     }
   }
 
-  // Remise à zéro du flag d'attaque consommé
   STATE.input.attackTriggered = false;
 }

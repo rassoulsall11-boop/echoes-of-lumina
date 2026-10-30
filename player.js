@@ -1,21 +1,25 @@
 // ===============================
-// XEROX – JOUEUR
+// XEROX – JOUEUR ET APTITUDES
 // ===============================
 
 import * as THREE from 'three';
 import { scene, camera } from './engine.js';
 import { STATE } from './state.js';
+import { audio } from './audio.js';
+import { emitSparks } from './particles.js';
 
 export let playerMesh;
 export let attackArcMesh;
 
 let targetCameraPos = new THREE.Vector3();
 let attackTimer = 0;
+let dashTimer = 0;
+let dashDir = new THREE.Vector3();
 
 export function initJoueur() {
   const group = new THREE.Group();
 
-  // Corps du joueur (Avatar Heroique)
+  // Corps héroïque
   const bodyGeo = new THREE.CapsuleGeometry(0.5, 0.8, 8, 16);
   const bodyMat = new THREE.MeshStandardMaterial({
     color: 0x00e5ff,
@@ -29,19 +33,15 @@ export function initJoueur() {
   body.receiveShadow = true;
   group.add(body);
 
-  // Yeux / Visière
+  // Visière
   const visorGeo = new THREE.BoxGeometry(0.5, 0.15, 0.3);
-  const visorMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
-    roughness: 0.1
-  });
+  const visorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, roughness: 0.1 });
   const visor = new THREE.Mesh(visorGeo, visorMat);
   visor.position.set(0, 1.2, -0.3);
   group.add(visor);
 
-  // Effet d'attaque (Arc d'énergie)
-  const arcGeo = new THREE.RingGeometry(0.8, 2.2, 16, 1, 0, Math.PI);
+  // Arc d'attaque
+  const arcGeo = new THREE.RingGeometry(0.8, 2.4, 16, 1, 0, Math.PI);
   const arcMat = new THREE.MeshBasicMaterial({
     color: 0x00ffff,
     side: THREE.DoubleSide,
@@ -57,12 +57,15 @@ export function initJoueur() {
   playerMesh = group;
   scene.add(playerMesh);
 
-  // Écouteurs d'entrées
+  STATE.joueur.stamina = 100;
+  STATE.joueur.staminaMax = 100;
+
   setupInputListeners();
 }
 
 function setupInputListeners() {
   window.addEventListener('keydown', (e) => {
+    audio.init();
     const k = e.key.toLowerCase();
     if (k === 'z' || k === 'w' || e.key === 'ArrowUp') STATE.input.z = true;
     if (k === 's' || e.key === 'ArrowDown') STATE.input.s = true;
@@ -71,6 +74,9 @@ function setupInputListeners() {
     if (e.code === 'Space') {
       STATE.input.space = true;
       triggerAttack();
+    }
+    if (e.key === 'Shift' || e.key === 'ShiftLeft') {
+      triggerDash();
     }
   });
 
@@ -88,42 +94,73 @@ export function triggerAttack() {
   if (STATE.joueur.attaqueEnCours) return;
   STATE.joueur.attaqueEnCours = true;
   STATE.input.attackTriggered = true;
-  attackTimer = 0.25; // duree en secondes
+  attackTimer = 0.25;
+  audio.playSwing();
 }
 
-export function updateJoueur() {
-  if (!playerMesh) return;
+export function triggerDash() {
+  if (dashTimer > 0 || STATE.joueur.stamina < 30) return;
 
-  const moveSpeed = STATE.joueur.vitesse;
-  let moveX = 0;
-  let moveZ = 0;
+  STATE.joueur.stamina -= 30;
+  dashTimer = 0.2; // Durée de l'impulsion
 
-  if (STATE.input.z) moveZ -= 1;
-  if (STATE.input.s) moveZ += 1;
-  if (STATE.input.q) moveX -= 1;
-  if (STATE.input.d) moveX += 1;
+  const moveX = (STATE.input.d ? 1 : 0) - (STATE.input.q ? 1 : 0);
+  const moveZ = (STATE.input.s ? 1 : 0) - (STATE.input.z ? 1 : 0);
 
   if (moveX !== 0 || moveZ !== 0) {
-    const length = Math.hypot(moveX, moveZ);
-    const nx = (moveX / length) * moveSpeed;
-    const nz = (moveZ / length) * moveSpeed;
-
-    playerMesh.position.x += nx;
-    playerMesh.position.z += nz;
-
-    // Orienter le joueur dans la direction du mouvement
-    const angle = Math.atan2(nx, nz);
-    playerMesh.rotation.y = angle;
+    dashDir.set(moveX, 0, moveZ).normalize();
+  } else {
+    // Dash vers l'avant selon orientation
+    playerMesh.getWorldDirection(dashDir);
+    dashDir.negate();
   }
 
-  // Mettre à jour la position dans STATE
+  STATE.joueur.invulnerableTimer = 0.3;
+  audio.playDash();
+  emitSparks(playerMesh.position, 0x00f0ff, 12);
+}
+
+export function updateJoueur(delta = 0.016) {
+  if (!playerMesh) return;
+
+  // Régénération Stamina
+  if (STATE.joueur.stamina < STATE.joueur.staminaMax) {
+    STATE.joueur.stamina = Math.min(STATE.joueur.staminaMax, STATE.joueur.stamina + 20 * delta);
+  }
+
+  if (dashTimer > 0) {
+    dashTimer -= delta;
+    playerMesh.position.x += dashDir.x * 0.45;
+    playerMesh.position.z += dashDir.z * 0.45;
+  } else {
+    const moveSpeed = STATE.joueur.vitesse;
+    let moveX = 0;
+    let moveZ = 0;
+
+    if (STATE.input.z) moveZ -= 1;
+    if (STATE.input.s) moveZ += 1;
+    if (STATE.input.q) moveX -= 1;
+    if (STATE.input.d) moveX += 1;
+
+    if (moveX !== 0 || moveZ !== 0) {
+      const length = Math.hypot(moveX, moveZ);
+      const nx = (moveX / length) * moveSpeed;
+      const nz = (moveZ / length) * moveSpeed;
+
+      playerMesh.position.x += nx;
+      playerMesh.position.z += nz;
+
+      const angle = Math.atan2(nx, nz);
+      playerMesh.rotation.y = angle;
+    }
+  }
+
   STATE.joueur.position.x = playerMesh.position.x;
   STATE.joueur.position.y = playerMesh.position.y;
   STATE.joueur.position.z = playerMesh.position.z;
 
-  // Gestion du timer d'attaque
   if (STATE.joueur.attaqueEnCours) {
-    attackTimer -= 0.016;
+    attackTimer -= delta;
     attackArcMesh.material.opacity = Math.max(0, attackTimer * 4);
     attackArcMesh.scale.setScalar(1 + (0.25 - attackTimer) * 2);
 
@@ -133,24 +170,15 @@ export function updateJoueur() {
     }
   }
 
-  // Timer d'invulnérabilité en cas de dégâts
   if (STATE.joueur.invulnerableTimer > 0) {
-    STATE.joueur.invulnerableTimer -= 0.016;
-    playerMesh.visible = Math.floor(Date.now() / 80) % 2 === 0;
+    STATE.joueur.invulnerableTimer -= delta;
+    playerMesh.visible = Math.floor(Date.now() / 70) % 2 === 0;
   } else {
     playerMesh.visible = true;
   }
 
-  // 🎥 Caméra fluide Zelda-like
-  targetCameraPos.set(
-    playerMesh.position.x,
-    playerMesh.position.y + 7,
-    playerMesh.position.z + 10
-  );
+  // Camera lerp
+  targetCameraPos.set(playerMesh.position.x, playerMesh.position.y + 7, playerMesh.position.z + 10);
   camera.position.lerp(targetCameraPos, 0.08);
-  camera.lookAt(
-    playerMesh.position.x,
-    playerMesh.position.y + 0.8,
-    playerMesh.position.z
-  );
+  camera.lookAt(playerMesh.position.x, playerMesh.position.y + 0.8, playerMesh.position.z);
 }
